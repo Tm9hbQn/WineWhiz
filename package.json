@@ -1,0 +1,21 @@
+{
+  "name": "bot1",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "tstt"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "compromise": "^14.8.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "fs": "^0.0.1-security",
+    "http": "^0.0.1-security",
+    "nodemon": "^2.0.22",
+    "openai": "^3.2.1",
+    "socket.io": "^4.6.1"
+  }
+}
