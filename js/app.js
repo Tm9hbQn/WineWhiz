@@ -224,6 +224,13 @@ function setupEventListeners() {
     document.execCommand('insertText', false, text);
   });
 
+  notesInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveNewWord(getInputText(notesInput).trim());
+    }
+  });
+
   // Edit modal
   modalClose.addEventListener('click', closeEditModal);
   editModal.addEventListener('click', (e) => {
