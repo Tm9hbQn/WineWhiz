@@ -179,6 +179,14 @@ const editAgePicker = $('#editAgePicker');
 const editNotesInput = $('#editNotesInput');
 const editDeleteBtn = $('#editDeleteBtn');
 const editSaveBtn = $('#editSaveBtn');
+const gridViewBtn = $('#gridViewBtn');
+const timelineViewBtn = $('#timelineViewBtn');
+const timelineWrapper = $('#timelineWrapper');
+const timelineTrack = $('#timelineTrack');
+const timelineAgeOverlay = $('#timelineAgeOverlay');
+const timelineAgeText = $('#timelineAgeText');
+
+let currentView = 'grid';
 
 /* ===== Initialize ===== */
 document.addEventListener('DOMContentLoaded', async () => {
@@ -249,6 +257,13 @@ function setupEventListeners() {
     const text = (e.clipboardData || window.clipboardData).getData('text/plain');
     document.execCommand('insertText', false, text);
   });
+
+  // View toggle
+  gridViewBtn.addEventListener('click', () => switchView('grid'));
+  timelineViewBtn.addEventListener('click', () => switchView('timeline'));
+
+  // Timeline scroll observer
+  window.addEventListener('scroll', onTimelineScroll, { passive: true });
 }
 
 /* ===== Input Handling ===== */
@@ -452,6 +467,10 @@ function renderWords() {
 
     wordsGrid.appendChild(card);
   });
+
+  if (currentView === 'timeline') {
+    renderTimeline();
+  }
 }
 
 /* ===== Edit Modal ===== */
@@ -501,4 +520,114 @@ async function handleDelete() {
   } catch (err) {
     console.error('Error deleting word:', err);
   }
+}
+
+/* ===== View Toggle ===== */
+function switchView(view) {
+  currentView = view;
+  gridViewBtn.classList.toggle('active', view === 'grid');
+  timelineViewBtn.classList.toggle('active', view === 'timeline');
+
+  if (view === 'grid') {
+    wordsGrid.classList.remove('hidden');
+    timelineWrapper.classList.add('hidden');
+  } else {
+    wordsGrid.classList.add('hidden');
+    timelineWrapper.classList.remove('hidden');
+    renderTimeline();
+  }
+}
+
+/* ===== Timeline ===== */
+function ageMonthsToDate(months) {
+  const date = new Date(BABY_BIRTHDAY);
+  date.setMonth(date.getMonth() + months);
+  return date;
+}
+
+function formatTimelineDate(months) {
+  const date = ageMonthsToDate(months);
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  return `${mm}.${yyyy}`;
+}
+
+function renderTimeline() {
+  timelineTrack.innerHTML = '';
+
+  // Sort by age ascending (chronological)
+  const sorted = [...words].sort((a, b) => (a.age_months ?? 0) - (b.age_months ?? 0));
+
+  if (sorted.length === 0) return;
+
+  sorted.forEach((w, i) => {
+    const item = document.createElement('div');
+    item.className = 'timeline-item';
+    item.style.animationDelay = `${i * 0.05}s`;
+    item.dataset.ageMonths = w.age_months ?? 0;
+
+    const dot = document.createElement('div');
+    dot.className = 'timeline-dot';
+
+    const card = document.createElement('div');
+    card.className = 'timeline-card';
+    card.addEventListener('click', () => openEditModal(w));
+
+    const wordEl = document.createElement('div');
+    wordEl.className = 'timeline-card-word';
+    wordEl.textContent = w.word;
+
+    const ageEl = document.createElement('div');
+    ageEl.className = 'timeline-card-age';
+    ageEl.textContent = w.age_months !== null ? ageMonthsToHebrew(w.age_months) : '';
+
+    card.appendChild(wordEl);
+    card.appendChild(ageEl);
+
+    if (w.notes) {
+      const notesEl = document.createElement('div');
+      notesEl.className = 'timeline-card-notes';
+      notesEl.textContent = w.notes;
+      card.appendChild(notesEl);
+    }
+
+    item.appendChild(dot);
+    item.appendChild(card);
+    timelineTrack.appendChild(item);
+  });
+
+  // Initial overlay update
+  updateTimelineOverlay();
+}
+
+function onTimelineScroll() {
+  if (currentView !== 'timeline') return;
+  updateTimelineOverlay();
+}
+
+function updateTimelineOverlay() {
+  const items = timelineTrack.querySelectorAll('.timeline-item');
+  if (items.length === 0) {
+    timelineAgeText.textContent = '';
+    return;
+  }
+
+  const viewportCenter = window.innerHeight / 2;
+  let closest = items[0];
+  let closestDist = Infinity;
+
+  items.forEach((item) => {
+    const rect = item.getBoundingClientRect();
+    const itemCenter = rect.top + rect.height / 2;
+    const dist = Math.abs(itemCenter - viewportCenter);
+    if (dist < closestDist) {
+      closestDist = dist;
+      closest = item;
+    }
+  });
+
+  const months = parseInt(closest.dataset.ageMonths) || 0;
+  const hebrewAge = ageMonthsToHebrew(months);
+  const dateStr = formatTimelineDate(months);
+  timelineAgeText.textContent = `${hebrewAge} - ${dateStr}`;
 }

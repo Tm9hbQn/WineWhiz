@@ -40,7 +40,6 @@
         </div>
       </div>
       <h1 class="site-title">המילים הראשונות של דניאלה</h1>
-      <p class="site-subtitle">כל מילה היא קסם קטן ✨</p>
     </div>
   </header>
 
@@ -110,8 +109,28 @@
     <div class="words-counter">
       <span id="wordCount">0</span> מילים עד עכשיו
     </div>
+    <div class="view-toggle">
+      <button class="view-toggle-btn active" id="gridViewBtn" aria-label="תצוגת רשת">
+        <span>▦</span> רשת
+      </button>
+      <button class="view-toggle-btn" id="timelineViewBtn" aria-label="תצוגת ציר זמן">
+        <span>━</span> ציר זמן
+      </button>
+    </div>
     <div class="words-grid" id="wordsGrid">
       <!-- Words populated by JS -->
+    </div>
+    <!-- Timeline View -->
+    <div class="timeline-wrapper hidden" id="timelineWrapper">
+      <div class="timeline-age-overlay" id="timelineAgeOverlay">
+        <div class="timeline-age-text" id="timelineAgeText"></div>
+      </div>
+      <div class="timeline-scroll" id="timelineScroll">
+        <div class="timeline-track" id="timelineTrack">
+          <!-- Timeline items populated by JS -->
+        </div>
+      </div>
+      <div class="timeline-center-indicator"></div>
     </div>
     <div class="empty-state" id="emptyState">
       <div class="empty-icon">🌱</div>
@@ -145,7 +164,7 @@
   </div>
 
   <footer class="main-footer">
-    <p>נבנה באהבה עבור דניאלה 💜</p>
+    <p>כל הזכויות על המילים שמורות לדן-דן® 05.12.2024 - חיה בועטת וצובטת</p>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
