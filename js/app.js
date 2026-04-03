@@ -272,16 +272,10 @@ function getInputText(el) {
 }
 
 function onWordInput() {
-  const text = getInputText(wordInput).trim();
-  if (text.length > 0) {
-    addBtn.classList.add('visible');
-  }
-  // Don't hide on empty — stays visible while focused
+  // No-op, button is always visible
 }
 
 function onWordFocus() {
-  // Show button immediately on focus so it's visible with the keyboard
-  addBtn.classList.add('visible');
   document.body.classList.add('input-focused');
 
   // Scroll input into view above keyboard
@@ -291,10 +285,6 @@ function onWordFocus() {
 }
 
 function onWordBlur() {
-  const text = getInputText(wordInput).trim();
-  if (!text) {
-    addBtn.classList.remove('visible');
-  }
   document.body.classList.remove('input-focused');
 }
 
@@ -308,7 +298,6 @@ function submitWord() {
   // Swish out input section
   const markerArea = document.querySelector('.marker-area');
   markerArea.classList.add('swish-out');
-  addBtn.classList.remove('visible');
 
   setTimeout(() => {
     inputSection.classList.add('hidden');
@@ -383,7 +372,6 @@ function resetInput() {
   wordInput.textContent = '';
   currentWord = '';
   currentAgeMonths = null;
-  addBtn.classList.remove('visible');
   inputSection.classList.remove('hidden');
 }
 
