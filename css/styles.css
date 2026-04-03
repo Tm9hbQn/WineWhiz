@@ -312,12 +312,9 @@ body {
   font-weight: bold;
 }
 
-/* When input is focused on mobile, stick the input area above the keyboard */
+/* When input is focused on mobile */
 .input-focused .input-section {
-  position: sticky;
-  bottom: 0;
   z-index: 50;
-  padding-bottom: env(safe-area-inset-bottom, 0.5rem);
 }
 
 /* ===== Age Section ===== */

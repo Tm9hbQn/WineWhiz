@@ -152,6 +152,7 @@ let currentWord = '';
 let currentAgeMonths = null;
 let editingWordId = null;
 let words = [];
+let submitting = false;
 
 /* ===== DOM Elements ===== */
 const $ = (sel) => document.querySelector(sel);
@@ -209,8 +210,15 @@ function setupEventListeners() {
     }
   });
 
-  // Add button
-  addBtn.addEventListener('click', submitWord);
+  // Add button — use pointerdown so it fires before blur/layout-shift on mobile
+  addBtn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    submitWord();
+  });
+  addBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    submitWord();
+  });
 
   // Age picker
   justNowBtn.addEventListener('click', () => selectAge(calculateCurrentAgeMonths()));
@@ -283,8 +291,10 @@ function onWordBlur() {
 
 /* ===== Submit Word Flow ===== */
 function submitWord() {
+  if (submitting) return;
   const text = wordInput.value.trim();
   if (!text) return;
+  submitting = true;
 
   currentWord = text;
 
@@ -365,6 +375,7 @@ function resetInput() {
   wordInput.value = '';
   currentWord = '';
   currentAgeMonths = null;
+  submitting = false;
   inputSection.classList.remove('hidden');
 }
 
