@@ -193,6 +193,7 @@ function setupEventListeners() {
   // Word input
   wordInput.addEventListener('input', onWordInput);
   wordInput.addEventListener('focus', onWordFocus);
+  wordInput.addEventListener('blur', onWordBlur);
   wordInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -252,17 +253,27 @@ function onWordInput() {
   const text = getInputText(wordInput).trim();
   if (text.length > 0) {
     addBtn.classList.add('visible');
-  } else {
-    addBtn.classList.remove('visible');
   }
+  // Don't hide on empty — stays visible while focused
 }
 
 function onWordFocus() {
-  // Subtle haptic-like visual feedback
-  const dot = document.querySelector('.marker-dot');
-  dot.style.animation = 'none';
-  dot.offsetHeight; // force reflow
-  dot.style.animation = 'dotPulse 1s ease-in-out infinite';
+  // Show button immediately on focus so it's visible with the keyboard
+  addBtn.classList.add('visible');
+  document.body.classList.add('input-focused');
+
+  // Scroll input into view above keyboard
+  setTimeout(() => {
+    inputSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 300);
+}
+
+function onWordBlur() {
+  const text = getInputText(wordInput).trim();
+  if (!text) {
+    addBtn.classList.remove('visible');
+  }
+  document.body.classList.remove('input-focused');
 }
 
 /* ===== Submit Word Flow ===== */
