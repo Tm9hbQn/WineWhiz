@@ -253,13 +253,14 @@ body {
   min-height: 2.5rem;
   line-height: 1.2;
   caret-color: var(--hot-pink);
-  word-break: break-word;
+  background: transparent;
+  border: none;
+  width: 100%;
+  direction: rtl;
 }
 
-.marker-input:empty::before {
-  content: attr(data-placeholder);
+.marker-input::placeholder {
   color: #C4B5D9;
-  pointer-events: none;
 }
 
 .marker-underline {

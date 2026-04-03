@@ -205,15 +205,8 @@ function setupEventListeners() {
   wordInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (getInputText(wordInput).trim()) submitWord();
+      if (wordInput.value.trim()) submitWord();
     }
-  });
-
-  // Prevent pasting rich text
-  wordInput.addEventListener('paste', (e) => {
-    e.preventDefault();
-    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
-    document.execCommand('insertText', false, text);
   });
 
   // Add button
@@ -290,7 +283,7 @@ function onWordBlur() {
 
 /* ===== Submit Word Flow ===== */
 function submitWord() {
-  const text = getInputText(wordInput).trim();
+  const text = wordInput.value.trim();
   if (!text) return;
 
   currentWord = text;
@@ -369,7 +362,7 @@ async function saveNewWord(notes) {
 }
 
 function resetInput() {
-  wordInput.textContent = '';
+  wordInput.value = '';
   currentWord = '';
   currentAgeMonths = null;
   inputSection.classList.remove('hidden');
