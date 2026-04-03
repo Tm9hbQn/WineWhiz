@@ -372,11 +372,15 @@ function resetInput() {
 
 function showSuccess(text) {
   successText.textContent = text;
+  successOverlay.classList.add('hidden');
+  // Force reflow to restart animation
+  void successOverlay.offsetWidth;
   successOverlay.classList.remove('hidden');
 
-  setTimeout(() => {
+  clearTimeout(showSuccess._timer);
+  showSuccess._timer = setTimeout(() => {
     successOverlay.classList.add('hidden');
-  }, 1500);
+  }, 2000);
 }
 
 /* ===== Age Options Builder ===== */
