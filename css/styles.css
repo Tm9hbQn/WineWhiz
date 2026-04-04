@@ -2099,6 +2099,105 @@ body {
   display: none !important;
 }
 
+/* ===== Vocabulary Analysis Cards ===== */
+.vocab-card {
+  background: white;
+  border-radius: 20px;
+  padding: 1.2rem 1rem;
+  margin-top: 1.5rem;
+  box-shadow: var(--card-shadow);
+}
+
+.vocab-card-title {
+  font-family: 'Secular One', sans-serif;
+  font-size: 1rem;
+  color: var(--deep-purple);
+  text-align: center;
+  margin-bottom: 0.8rem;
+}
+
+.vocab-chart-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.vocab-chart-wrap canvas {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  height: auto;
+}
+
+.vocab-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+  direction: ltr;
+}
+
+.vocab-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--lavender), var(--hot-pink));
+  outline: none;
+}
+
+.vocab-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--soft-purple), var(--hot-pink));
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(108, 92, 231, 0.3);
+}
+
+.vocab-slider-label {
+  font-family: 'Secular One', sans-serif;
+  font-size: 0.85rem;
+  color: var(--soft-purple);
+  white-space: nowrap;
+  min-width: 75px;
+  text-align: center;
+  direction: rtl;
+}
+
+.vocab-stats {
+  font-family: 'Varela Round', sans-serif;
+  font-size: 0.8rem;
+  color: var(--deep-purple);
+  text-align: center;
+  margin-top: 0.5rem;
+  opacity: 0.7;
+}
+
+.vocab-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem 0.8rem;
+  margin-top: 0.6rem;
+}
+
+.vocab-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  color: var(--deep-purple);
+}
+
+.vocab-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
 /* ===== Utility Classes ===== */
 .hidden {
   display: none !important;
