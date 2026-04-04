@@ -350,52 +350,84 @@ body {
   line-height: 1.6;
 }
 
-.age-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  justify-content: center;
+/* Age Wheel Picker */
+.age-wheel-wrapper {
+  position: relative;
+  height: 200px;
   margin-bottom: 1.2rem;
-  max-height: 220px;
-  overflow-y: auto;
-  padding: 0.5rem;
-  scrollbar-width: thin;
-  scrollbar-color: var(--lavender) transparent;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 25%, black 75%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 25%, black 75%, transparent 100%);
 }
 
-.age-options::-webkit-scrollbar {
-  width: 6px;
-}
-
-.age-options::-webkit-scrollbar-thumb {
+.age-wheel-highlight {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 85%;
+  height: 48px;
+  border-radius: 14px;
   background: var(--lavender);
-  border-radius: 3px;
+  border: 2px solid rgba(109, 92, 231, 0.15);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.age-wheel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+  height: 100%;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 76px 0;
+}
+
+.age-wheel::-webkit-scrollbar {
+  display: none;
 }
 
 .age-option {
-  background: var(--lavender);
-  border: 2px solid transparent;
-  border-radius: 50px;
-  padding: 0.5rem 1.2rem;
-  font-family: 'Varela Round', sans-serif;
-  font-size: 0.9rem;
+  scroll-snap-align: center;
+  flex-shrink: 0;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 85%;
+  border-radius: 14px;
+  font-family: 'Secular One', sans-serif;
+  font-size: 1.15rem;
   color: var(--deep-purple);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.2s ease, opacity 0.2s ease, color 0.2s ease;
+  opacity: 0.4;
+  background: none;
+  border: none;
+  padding: 0;
   white-space: nowrap;
+  position: relative;
+  z-index: 2;
 }
 
-.age-option:hover {
-  background: var(--pink);
-  border-color: var(--hot-pink);
-  transform: scale(1.05);
+.age-option.wheel-center {
+  opacity: 1;
+  transform: scale(1.08);
+  color: var(--deep-purple);
+  font-size: 1.25rem;
+}
+
+.age-option.wheel-near {
+  opacity: 0.65;
+  transform: scale(0.95);
 }
 
 .age-option.selected {
-  background: linear-gradient(135deg, var(--hot-pink), var(--soft-purple));
-  color: white;
-  border-color: transparent;
-  box-shadow: 0 3px 12px rgba(255, 107, 157, 0.3);
+  color: var(--hot-pink);
+  font-weight: bold;
 }
 
 .just-now-btn {
@@ -816,11 +848,36 @@ body {
   max-height: 140px;
   overflow-y: auto;
   padding: 0.3rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--lavender) transparent;
 }
 
 .modal-age-picker .age-option {
+  font-family: 'Varela Round', sans-serif;
   font-size: 0.8rem;
   padding: 0.35rem 0.9rem;
+  background: var(--lavender);
+  border: 2px solid transparent;
+  border-radius: 50px;
+  opacity: 1;
+  transform: none;
+  height: auto;
+  width: auto;
+  scroll-snap-align: unset;
+  transition: all 0.3s ease;
+}
+
+.modal-age-picker .age-option:hover {
+  background: var(--pink);
+  border-color: var(--hot-pink);
+  transform: scale(1.05);
+}
+
+.modal-age-picker .age-option.selected {
+  background: linear-gradient(135deg, var(--hot-pink), var(--soft-purple));
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 3px 12px rgba(255, 107, 157, 0.3);
 }
 
 .modal-actions {

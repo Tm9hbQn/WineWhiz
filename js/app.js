@@ -331,7 +331,7 @@ function submitWord() {
     markerArea.classList.remove('swish-out');
 
     // Show age section
-    ageQuestion.textContent = `מתי ${BABY_NAME} אמרה "${currentWord}" לראשונה?`;
+    ageQuestion.textContent = `מתי ${BABY_NAME} אמרה "${currentWord}" בפעם הראשונה?`;
     ageSection.classList.remove('hidden');
     ageSection.querySelector('.age-container').classList.add('swish-in');
 
@@ -358,7 +358,7 @@ function selectAge(months) {
     container.classList.remove('swish-out', 'swish-in');
 
     // Show notes
-    notesTitle.textContent = `רוצה להוסיף הקשר ל"${currentWord}"? 📝`;
+    notesTitle.textContent = `רוצים להוסיף הקשר ל"${currentWord}"? 📝`;
     notesInput.textContent = '';
     notesSection.classList.remove('hidden');
     notesSection.querySelector('.notes-container').classList.add('fade-in');
@@ -421,23 +421,62 @@ function showSuccess(text) {
 function buildAgeOptions(container, selectedMonths) {
   container.innerHTML = '';
   const maxMonths = calculateCurrentAgeMonths();
+  const isWheel = container === ageOptions;
 
-  for (let m = 0; m <= maxMonths; m++) {
+  // Build options from newest to oldest
+  for (let m = maxMonths; m >= 0; m--) {
     const btn = document.createElement('button');
     btn.className = 'age-option' + (m === selectedMonths ? ' selected' : '');
     btn.textContent = ageMonthsToHebrew(m);
     btn.dataset.months = m;
     btn.addEventListener('click', () => {
-      if (container === ageOptions) {
+      if (isWheel) {
         selectAge(m);
       } else {
-        // Edit modal picker
         container.querySelectorAll('.age-option').forEach((o) => o.classList.remove('selected'));
         btn.classList.add('selected');
       }
     });
     container.appendChild(btn);
   }
+
+  // Set up wheel scroll behavior for the main age picker
+  if (isWheel) {
+    setupAgeWheel(container);
+  }
+}
+
+function setupAgeWheel(wheel) {
+  let scrollRaf = null;
+
+  function updateWheelHighlight() {
+    const items = wheel.querySelectorAll('.age-option');
+    const wheelRect = wheel.getBoundingClientRect();
+    const centerY = wheelRect.top + wheelRect.height / 2;
+
+    items.forEach((item) => {
+      const itemRect = item.getBoundingClientRect();
+      const itemCenter = itemRect.top + itemRect.height / 2;
+      const dist = Math.abs(itemCenter - centerY);
+
+      item.classList.remove('wheel-center', 'wheel-near');
+      if (dist < 24) {
+        item.classList.add('wheel-center');
+      } else if (dist < 72) {
+        item.classList.add('wheel-near');
+      }
+    });
+  }
+
+  wheel.addEventListener('scroll', () => {
+    if (scrollRaf) cancelAnimationFrame(scrollRaf);
+    scrollRaf = requestAnimationFrame(updateWheelHighlight);
+  }, { passive: true });
+
+  // Initial highlight after render
+  requestAnimationFrame(() => {
+    updateWheelHighlight();
+  });
 }
 
 /* ===== Load & Render Words ===== */

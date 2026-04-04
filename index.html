@@ -53,15 +53,15 @@
             class="marker-input"
             id="wordInput"
             type="text"
-            placeholder="כתבי מילה חדשה..."
-            aria-label="הכניסי מילה חדשה"
+            placeholder="כתבו מילה חדשה..."
+            aria-label="הוסיפו מילה חדשה"
             autocomplete="off"
           >
         </div>
         <div class="marker-underline"></div>
-        <button class="add-btn" id="addBtn" aria-label="הוסיפי מילה">
+        <button class="add-btn" id="addBtn" aria-label="הוסיפו מילה">
           <span class="add-btn-icon">+</span>
-          <span class="add-btn-text">הוסיפי ✨</span>
+          <span class="add-btn-text">הוסיפו ✨</span>
         </button>
       </div>
     </div>
@@ -71,7 +71,10 @@
   <section class="age-section hidden" id="ageSection">
     <div class="age-container">
       <h2 class="age-question" id="ageQuestion"></h2>
-      <div class="age-options" id="ageOptions"></div>
+      <div class="age-wheel-wrapper">
+        <div class="age-wheel-highlight"></div>
+        <div class="age-wheel" id="ageOptions"></div>
+      </div>
       <button class="just-now-btn" id="justNowBtn">עכשיו! 🎉</button>
     </div>
   </section>
@@ -84,13 +87,13 @@
         class="notes-input"
         id="notesInput"
         contenteditable="true"
-        data-placeholder="הוסיפי הקשר או סיפור..."
+        data-placeholder="הוסיפו הקשר או סיפור..."
         role="textbox"
         aria-label="הערות"
       ></div>
       <div class="notes-actions">
-        <button class="notes-skip-btn" id="notesSkipBtn">דלגי</button>
-        <button class="notes-save-btn" id="notesSaveBtn">שמרי 💕</button>
+        <button class="notes-skip-btn" id="notesSkipBtn">דלגו</button>
+        <button class="notes-save-btn" id="notesSaveBtn">שמרו 💕</button>
       </div>
     </div>
   </section>
@@ -152,11 +155,11 @@
       </div>
       <div class="modal-field">
         <label>הערות</label>
-        <div class="modal-input modal-notes" id="editNotesInput" contenteditable="true" role="textbox" data-placeholder="הוסיפי הקשר..."></div>
+        <div class="modal-input modal-notes" id="editNotesInput" contenteditable="true" role="textbox" data-placeholder="הוסיפו הקשר..."></div>
       </div>
       <div class="modal-actions">
-        <button class="modal-delete-btn" id="editDeleteBtn">מחקי 🗑️</button>
-        <button class="modal-save-btn" id="editSaveBtn">שמרי 💕</button>
+        <button class="modal-delete-btn" id="editDeleteBtn">מחקו 🗑️</button>
+        <button class="modal-save-btn" id="editSaveBtn">שמרו 💕</button>
       </div>
     </div>
   </div>
