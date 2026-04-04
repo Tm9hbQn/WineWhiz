@@ -595,16 +595,9 @@ body {
   100% { transform: scale(1); }
 }
 
-/* ===== Search Section ===== */
-.search-section {
-  position: relative;
-  z-index: 10;
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 0 1.2rem 0.5rem;
-}
-
+/* ===== Search ===== */
 .search-container {
+  margin-bottom: 1rem;
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -1490,10 +1483,6 @@ body {
 
   .marker-area {
     padding: 1.2rem 1.2rem 0.8rem;
-  }
-
-  .search-section {
-    padding: 0 1rem 0.3rem;
   }
 
   .words-section {
