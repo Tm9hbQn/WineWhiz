@@ -2050,6 +2050,12 @@ body {
   background: rgba(243, 229, 245, 0.5);
 }
 
+.section-nav .view-toggle-btn.active {
+  background: linear-gradient(135deg, var(--hot-pink), var(--soft-purple));
+  color: white;
+  box-shadow: 0 3px 12px rgba(255, 107, 157, 0.3);
+}
+
 /* ===== Timeline Load More ===== */
 .timeline-load-more-wrap {
   position: relative;

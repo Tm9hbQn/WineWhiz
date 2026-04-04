@@ -1006,18 +1006,17 @@ function closeEditModal() {
 
   // Scroll timeline to the last viewed word (may differ from the original if user navigated via evolution chain)
   if (lastViewedId && currentView === 'timeline') {
-    requestAnimationFrame(() => {
+    setTimeout(() => {
       let el = timelineTrack.querySelector(`[data-word-id="${lastViewedId}"]`);
       if (!el) {
-        // Word not currently loaded - load all and find it
         timelineDisplayCount = Infinity;
         renderTimeline();
         el = timelineTrack.querySelector(`[data-word-id="${lastViewedId}"]`);
       }
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        scrollToTimelineItem(el);
       }
-    });
+    }, 100);
   }
 }
 
@@ -1282,6 +1281,17 @@ function formatTimelineDate(months) {
 let timelineDisplayCount = 10;
 const TIMELINE_PAGE_SIZE = 50;
 
+// Scroll to a timeline item, accounting for sticky nav height
+function scrollToTimelineItem(el) {
+  const nav = document.getElementById('sectionNav');
+  const navH = nav ? nav.offsetHeight : 0;
+  const ageOverlay = document.getElementById('timelineAgeOverlay');
+  const ageH = ageOverlay ? ageOverlay.offsetHeight : 0;
+  const offset = navH + ageH + 12;
+  const top = el.getBoundingClientRect().top + window.pageYOffset - offset;
+  window.scrollTo({ top: top, behavior: 'smooth' });
+}
+
 function renderTimeline() {
   timelineTrack.innerHTML = '';
 
@@ -1393,7 +1403,7 @@ function renderTimeline() {
               neighborEl = timelineTrack.querySelector(`[data-word-id="${nId}"]`);
             }
             if (neighborEl) {
-              neighborEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              scrollToTimelineItem(neighborEl);
               neighborEl.classList.add('timeline-item-highlight');
               setTimeout(() => neighborEl.classList.remove('timeline-item-highlight'), 1500);
               break;
