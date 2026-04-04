@@ -238,6 +238,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupEventListeners();
   buildAgeOptions(ageOptions, null);
   await loadWords();
+
+  // Debug: show connection status in console
+  console.log('[WordByDandan] supabase client:', supabase ? 'connected' : 'MISSING');
+  console.log('[WordByDandan] words loaded:', words.length);
+  console.log('[WordByDandan] window.supabase SDK:', typeof window.supabase);
 });
 
 /* ===== Event Listeners ===== */
