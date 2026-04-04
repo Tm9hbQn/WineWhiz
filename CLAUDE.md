@@ -127,7 +127,7 @@ words {
 ## Development Notes
 - The site is a single-page app with no build step
 - All JS is vanilla (no transpilation needed)
-- Cache-bust JS files with `?v=N` query parameter - **MUST increment on every JS change**
+- Cache-bust JS/CSS files with `?v=N` query parameter - **MUST increment on every JS or CSS change**
 - The site uses IntersectionObserver for scroll-reveal animations
 - Fuzzy search uses Levenshtein distance algorithm
 - Timeline is vertical (flex-direction: column) with vertical scroll
@@ -147,8 +147,9 @@ words {
 ### 1. Cache Buster Updated
 ```bash
 grep 'app.js?v=' index.html
+grep 'styles.css?v=' index.html
 ```
-The `?v=N` number in `<script src="js/app.js?v=N">` MUST be incremented whenever app.js changes. Without this, browsers serve stale JS and changes appear broken.
+The `?v=N` number in `<script src="js/app.js?v=N">` and `<link href="css/styles.css?v=N">` MUST be incremented whenever the respective file changes. Without this, browsers serve stale JS/CSS and changes appear broken.
 
 ### 2. RTL Arrow Direction
 ```bash
@@ -202,6 +203,7 @@ grep 'words-title' index.html
 | Arrows showing `→` instead of `←` | Browser cache serving old JS | Increment `?v=N` cache buster |
 | New page showing 404 | File not committed/pushed | Run `git status` before push |
 | Pixel baby appearing on main site | CSS/JS still referenced in index.html | Check with `grep pixel-baby index.html` |
-| CSS changes not reflecting | Browser cache | Add `?v=N` to CSS links if needed |
+| CSS changes not reflecting | Browser cache | Increment `?v=N` on CSS link (ALWAYS do this) |
+| Nav buttons look unstyled | CSS cache buster not updated | Increment styles.css?v=N |
 | Timeline showing all words (no pagination) | `timelineDisplayCount` not resetting | Verify reset in `renderWords()` |
 | Stat card highlights broken | Multiple conflicting animation declarations | Check CSS specificity order |

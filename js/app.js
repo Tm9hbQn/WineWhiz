@@ -1282,11 +1282,8 @@ function renderTimeline() {
       loadMoreWrap.classList.remove('hidden');
       const loadMoreBtn = document.getElementById('timelineLoadMoreBtn');
       const remaining = totalCount - timelineDisplayCount;
-      if (remaining > TIMELINE_PAGE_SIZE) {
-        loadMoreBtn.textContent = `טענו עוד ${TIMELINE_PAGE_SIZE} מילים`;
-      } else {
-        loadMoreBtn.textContent = `טענו את כל ${remaining} המילים`;
-      }
+      const nextLoad = Math.min(remaining, TIMELINE_PAGE_SIZE);
+      loadMoreBtn.textContent = `טענו עוד ${nextLoad} מילים`;
     } else {
       loadMoreWrap.classList.add('hidden');
     }
