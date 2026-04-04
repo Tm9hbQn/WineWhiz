@@ -21,12 +21,14 @@
 /
 ├── index.html              # Main single-page app
 ├── tests.html              # Pixel art character studio / test page
+├── vocabulary.json         # Static vocabulary data with CDI categories (38 words)
 ├── CLAUDE.md               # This file - READ BEFORE MAKING CHANGES
 ├── css/
-│   ├── styles.css          # All main site styles (~2100 lines)
+│   ├── styles.css          # All main site styles (~2200 lines)
 │   ├── pixel-baby.css      # Pixel art baby character styles (not loaded in main)
 ├── js/
 │   ├── app.js              # All main app logic (~1800 lines)
+│   ├── vocab-charts.js     # Vocabulary analysis charts (CDI categories, 3 cards)
 │   ├── pixel-baby.js       # Pixel art baby character code (not loaded in main)
 └── supabase/               # Supabase config
 ```
@@ -105,12 +107,29 @@ Words can be linked to show language evolution (e.g., "בא" → "פא פא" →
 ### Vocabulary Analysis Cards (below stat card)
 - Data source: `vocabulary.json` (static file, CDI-categorized)
 - Baby max age capped at 16 months (BABY_MAX_AGE in vocab-charts.js)
-- **Card 1: "אבולוציית הקטגוריות"** - Stacked bars per month, touch for tooltip with category breakdown and example words
-- **Card 2: "צמיחת הקטגוריות (מוחלט)"** - Stacked area chart showing absolute growth
-- **Card 3: "מפת תשומת הלב"** - Bubble chart of sub-categories (people, animals, food, etc.)
+- **Card 1: "אבולוציית הקטגוריות"** - Stacked bars per month. Shows persistent category breakdown info below chart (not just on click). Info updates when slider moves or when user clicks a specific bar
+- **Card 2: "חלוקה יחסית של הקטגוריות"** - Proportional stacked bar (single vertical column) showing relative % of each category. Animates smoothly when slider changes. Labels with counts and percentages on the side
+- **Card 3: "מפת תשומת הלב"** - Bubble chart showing CDI categories (not sub-categories)
 - All cards have independent time sliders
-- CDI categories: specific_nominals, general_nominals, action_words, descriptive_words, social_routines
-- When adding new words to DB, also update vocabulary.json with proper categorization
+- **CDI Categories (MacArthur-Bates standard):**
+  - `people` (אנשים) - names of people and family titles
+  - `sound_effects` (צלילים וקולות) - animal sounds, environmental sounds
+  - `animals` (חיות) - animal names (not sounds)
+  - `food_drink` (אוכל ושתייה) - food and drink names
+  - `games_routines` (משחקים ושגרות) - social routines, greetings, body functions
+  - `action_words` (מילות פעולה) - verbs
+  - `descriptive_words` (מילות תיאור) - adjectives
+  - `clothing` (ביגוד) - clothing items
+  - `toys` (צעצועים) - toys and play items
+  - `household` (חפצי בית) - household objects
+  - `outside` (חוץ וטבע) - outdoor/nature items
+  - `unclear` (לא ברור) - uncategorized
+- When adding new words to DB, also update vocabulary.json with proper CDI categorization
+- **Planned improvements (not yet implemented):**
+  - Each chart should have a subtitle/description explaining what it shows
+  - Category labels in legends should be clickable to show CDI category explanations
+  - Main trends chart ("גידול בסך אוצר המילים") should also have a slider and persistent info panel below it
+  - Bubble map should use CDI main categories (currently uses CDI categories correctly)
 
 ## Pixel Art Baby Character (WIP)
 A pixel art baby girl character is being developed for the site:
@@ -160,8 +179,9 @@ words {
 ```bash
 grep 'app.js?v=' index.html
 grep 'styles.css?v=' index.html
+grep 'vocab-charts.js?v=' index.html
 ```
-The `?v=N` number in `<script src="js/app.js?v=N">` and `<link href="css/styles.css?v=N">` MUST be incremented whenever the respective file changes. Without this, browsers serve stale JS/CSS and changes appear broken.
+The `?v=N` number in `<script src="js/app.js?v=N">`, `<link href="css/styles.css?v=N">`, and `<script src="js/vocab-charts.js?v=N">` MUST be incremented whenever the respective file changes. Without this, browsers serve stale JS/CSS and changes appear broken.
 
 ### 2. RTL Arrow Direction
 ```bash
@@ -192,8 +212,15 @@ Must return empty. The pixel baby CSS/JS are NOT loaded in the main site (remove
 ```bash
 # Check for unclosed strings or obvious JS errors
 node -c js/app.js 2>&1 | head -5
+node -c js/vocab-charts.js 2>&1 | head -5
 ```
 Quick syntax validation before pushing.
+
+### 5b. Vocabulary JSON Validity
+```bash
+node -e "JSON.parse(require('fs').readFileSync('vocabulary.json','utf8'))" 2>&1 | head -3
+```
+Ensure vocabulary.json is valid JSON. Each entry needs: id, word, target_meaning, age_in_months, cdi_category, sub_category, notes.
 
 ### 6. All New Files Are Git-Tracked
 ```bash
