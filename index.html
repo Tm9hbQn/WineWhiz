@@ -111,18 +111,18 @@
       <span id="wordCount">0</span> מילים עד עכשיו
     </div>
     <div class="view-toggle">
-      <button class="view-toggle-btn active" id="gridViewBtn" aria-label="תצוגת רשת">
+      <button class="view-toggle-btn" id="gridViewBtn" aria-label="תצוגת רשת">
         <span>▦</span> רשת
       </button>
-      <button class="view-toggle-btn" id="timelineViewBtn" aria-label="תצוגת ציר זמן">
+      <button class="view-toggle-btn active" id="timelineViewBtn" aria-label="תצוגת ציר זמן">
         <span>━</span> ציר זמן
       </button>
     </div>
-    <div class="words-grid" id="wordsGrid">
+    <div class="words-grid hidden" id="wordsGrid">
       <!-- Words populated by JS -->
     </div>
     <!-- Timeline View -->
-    <div class="timeline-wrapper hidden" id="timelineWrapper">
+    <div class="timeline-wrapper" id="timelineWrapper">
       <div class="timeline-age-overlay" id="timelineAgeOverlay">
         <div class="timeline-age-text" id="timelineAgeText"></div>
       </div>

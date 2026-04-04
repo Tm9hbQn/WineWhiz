@@ -218,7 +218,7 @@ const timelineTrack = $('#timelineTrack');
 const timelineAgeOverlay = $('#timelineAgeOverlay');
 const timelineAgeText = $('#timelineAgeText');
 
-let currentView = 'grid';
+let currentView = 'timeline';
 
 /* ===== Initialize ===== */
 document.addEventListener('DOMContentLoaded', async () => {
