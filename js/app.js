@@ -1,6 +1,6 @@
 /* ===== Configuration ===== */
-const SUPABASE_URL = 'https://xyzcompanyid.supabase.co'; // Replace with your Supabase URL
-const SUPABASE_ANON_KEY = 'your-anon-key-here'; // Replace with your Supabase anon key
+const SUPABASE_URL = 'https://hxhyaumawnmsbqwediqe.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4aHlhdW1hd25tc2Jxd2VkaXFlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNDI2ODAsImV4cCI6MjA5MDgxODY4MH0.NEXiKaMfI_PS6LxyiYHSzHOqsOBHTuHICLDErVNJckY';
 
 const BABY_BIRTHDAY = new Date(2024, 11, 5); // December 5, 2024
 const BABY_NAME = 'דניאלה';
@@ -11,7 +11,7 @@ let useLocalStorage = false;
 
 function initSupabase() {
   try {
-    if (SUPABASE_URL.includes('xyzcompanyid') || SUPABASE_ANON_KEY === 'your-anon-key-here' || !window.supabase) {
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !window.supabase) {
       useLocalStorage = true;
       return;
     }
