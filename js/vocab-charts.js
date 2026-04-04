@@ -1,6 +1,6 @@
 /* =============================================
    Vocabulary Analysis Charts - Wordbydandan
-   Smooth animations, site palette, mobile-first
+   CDI-based categories (MacArthur-Bates standard)
    ============================================= */
 (function () {
   'use strict';
@@ -19,23 +19,40 @@
     bg: '#FFF9FB',
   };
 
+  // CDI-based categories (MacArthur-Bates Communicative Development Inventories)
   var CAT_COLORS = {
-    specific_nominals: COLORS.pink,
-    general_nominals: COLORS.purple,
-    action_words: COLORS.teal,
-    descriptive_words: COLORS.yellow,
-    social_routines: COLORS.coral,
+    sound_effects: '#CE93D8',
+    animals: '#6C5CE7',
+    food_drink: '#FFD93D',
+    clothing: '#4ECDC4',
+    toys: '#FF8A80',
+    household: '#FFB74D',
+    outside: '#81C784',
+    people: '#FF6B9D',
+    games_routines: '#F48FB1',
+    action_words: '#4DD0E1',
+    descriptive_words: '#FFF176',
     unclear: '#B0BEC5',
   };
   var CAT_LABELS = {
-    specific_nominals: 'שמות פרטיים',
-    general_nominals: 'שמות כלליים',
-    action_words: 'פעלים',
-    descriptive_words: 'תיאורים',
-    social_routines: 'שגרות חברתיות',
+    sound_effects: 'צלילים וקולות',
+    animals: 'חיות',
+    food_drink: 'אוכל ושתייה',
+    clothing: 'ביגוד',
+    toys: 'צעצועים',
+    household: 'חפצי בית',
+    outside: 'חוץ וטבע',
+    people: 'אנשים',
+    games_routines: 'משחקים ושגרות',
+    action_words: 'מילות פעולה',
+    descriptive_words: 'מילות תיאור',
     unclear: 'לא ברור',
   };
-  var CAT_ORDER = ['specific_nominals', 'general_nominals', 'action_words', 'descriptive_words', 'social_routines'];
+  var CAT_ORDER = [
+    'people', 'sound_effects', 'animals', 'food_drink',
+    'games_routines', 'action_words', 'descriptive_words',
+    'clothing', 'toys', 'household', 'outside'
+  ];
 
   var SUB_COLORS = {
     people: '#FF6B9D', animals: '#6C5CE7', food: '#FFD93D',
@@ -145,6 +162,36 @@
     });
   }
 
+  // Helper: build category breakdown HTML
+  function buildCategoryBreakdownHTML(maxAge, highlightMonth) {
+    var words = getWordsUpTo(maxAge);
+    var cats = getCategories(words);
+    var total = words.filter(function (w) { return w.cdi_category !== 'unclear'; }).length;
+
+    var html = '<div class="vocab-tip-card">';
+    if (highlightMonth !== undefined) {
+      var monthWords = getWordsUpTo(highlightMonth);
+      var monthCats = getCategories(monthWords);
+      var monthTotal = monthWords.filter(function (w) { return w.cdi_category !== 'unclear'; }).length;
+      html += '<div class="vocab-tip-title">' + ageToHebrew(highlightMonth) + ' — ' + monthTotal + ' מילים</div>';
+      cats = monthCats;
+      total = monthTotal;
+    } else {
+      html += '<div class="vocab-tip-title">עד גיל ' + ageToHebrew(maxAge) + ' — ' + total + ' מילים</div>';
+    }
+
+    CAT_ORDER.forEach(function (c) {
+      var list = cats[c] || [];
+      if (!list.length) return;
+      var pct = total > 0 ? Math.round((list.length / total) * 100) : 0;
+      var examples = list.slice(-3).map(function (w) { return w.word; }).join(', ');
+      html += '<div class="vocab-tip-row"><span class="vocab-legend-dot" style="background:' + CAT_COLORS[c] + '"></span>' +
+        CAT_LABELS[c] + ': <strong>' + list.length + '</strong> (' + pct + '%) <span class="vocab-tip-ex">(' + examples + ')</span></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
   // ==========================================
   // CHART 1: STACKED BARS (category evolution)
   // ==========================================
@@ -191,7 +238,6 @@
     var gap = (cW - barW * months.length) / (months.length + 1);
     var yMax = Math.ceil(maxTotal / 5) * 5 || 5;
 
-    function xPos(i) { return PAD.left + gap + i * (barW + gap) + barW / 2; }
     function yPos(v) { return PAD.top + cH - (v / yMax) * cH; }
 
     ctx.clearRect(0, 0, W, H);
@@ -220,7 +266,6 @@
         if (count === 0) return;
         var barH = (count / yMax) * cH;
         var y = base - (stack / yMax) * cH - barH;
-        // Rounded corners on top segment
         ctx.fillStyle = CAT_COLORS[c];
         ctx.globalAlpha = 0.85;
         ctx.beginPath();
@@ -243,14 +288,18 @@
       ctx.fillText(d.month + 'ח\'', x + barW / 2, H - PAD.bottom + 16);
     });
 
-    // Touch/click tooltip
+    // Show default tooltip (full breakdown for current slider value)
+    var tipEl = document.getElementById(canvasId + 'Tip');
+    if (tipEl) {
+      tipEl.innerHTML = buildCategoryBreakdownHTML(maxAge);
+    }
+
+    // Touch/click tooltip - updates to show specific month
     canvas.onclick = function (e) {
       var rect = canvas.getBoundingClientRect();
       var mx = (e.clientX - rect.left);
-      var tipEl = document.getElementById(canvasId + 'Tip');
       if (!tipEl) return;
 
-      // Find closest bar
       var closest = -1, minDist = Infinity;
       monthData.forEach(function (d, i) {
         var bx = PAD.left + gap + i * (barW + gap) + barW / 2;
@@ -258,34 +307,26 @@
         if (dist < minDist) { minDist = dist; closest = i; }
       });
 
-      if (closest < 0 || minDist > barW * 2) { tipEl.innerHTML = ''; return; }
+      if (closest < 0 || minDist > barW * 2) {
+        tipEl.innerHTML = buildCategoryBreakdownHTML(maxAge);
+        return;
+      }
       var d = monthData[closest];
-      var words = getWordsUpTo(d.month);
-      var cats = getCategories(words);
-
-      var html = '<div class="vocab-tip-card">';
-      html += '<div class="vocab-tip-title">' + ageToHebrew(d.month) + ' — ' + d.total + ' מילים</div>';
-      CAT_ORDER.forEach(function (c) {
-        var list = cats[c] || [];
-        if (!list.length) return;
-        var examples = list.slice(-3).map(function (w) { return w.word; }).join(', ');
-        html += '<div class="vocab-tip-row"><span class="vocab-legend-dot" style="background:' + CAT_COLORS[c] + '"></span>' +
-          CAT_LABELS[c] + ': <strong>' + list.length + '</strong> <span class="vocab-tip-ex">(' + examples + ')</span></div>';
-      });
-      html += '</div>';
-      tipEl.innerHTML = html;
+      tipEl.innerHTML = buildCategoryBreakdownHTML(d.month, d.month);
     };
   }
 
   // ==========================================
-  // CHART 2: ABSOLUTE STACKED AREA
+  // CHART 2: PROPORTIONAL STACKED BAR (relative %)
   // ==========================================
-  function drawAbsoluteArea(canvasId, maxAge) {
+  var propAnimState = {};
+
+  function drawProportionalBar(canvasId, maxAge) {
     var canvas = document.getElementById(canvasId);
     if (!canvas) return;
     var dpr = window.devicePixelRatio || 1;
     var W = canvas.parentElement.offsetWidth;
-    var H = 260;
+    var H = 320;
     canvas.width = W * dpr;
     canvas.height = H * dpr;
     canvas.style.width = W + 'px';
@@ -293,85 +334,145 @@
     var ctx = canvas.getContext('2d');
     ctx.scale(dpr, dpr);
 
-    var PAD = { top: 12, right: 12, bottom: 36, left: 38 };
-    var cW = W - PAD.left - PAD.right;
-    var cH = H - PAD.top - PAD.bottom;
-    var range = getAgeRange();
+    var words = getWordsUpTo(maxAge);
+    var cats = getCategories(words);
+    var total = words.filter(function (w) { return w.cdi_category !== 'unclear'; }).length;
 
-    var months = [];
-    for (var m = range.min; m <= Math.min(maxAge, range.max); m++) months.push(m);
-
-    var maxTotal = 0;
-    var monthData = months.map(function (m) {
-      var words = getWordsUpTo(m);
-      var cats = getCategories(words);
-      var row = { month: m };
-      var total = 0;
-      CAT_ORDER.forEach(function (c) {
-        row[c] = (cats[c] || []).length;
-        total += row[c];
-      });
-      row.total = total;
-      if (total > maxTotal) maxTotal = total;
-      return row;
+    // Calculate target percentages
+    var targetPcts = {};
+    CAT_ORDER.forEach(function (c) {
+      targetPcts[c] = total > 0 ? ((cats[c] || []).length / total) * 100 : 0;
     });
 
-    if (monthData.length < 2) return;
-    var yMax = Math.ceil(maxTotal / 5) * 5 || 5;
+    // Initialize animation state if needed
+    if (!propAnimState[canvasId]) {
+      propAnimState[canvasId] = {};
+      CAT_ORDER.forEach(function (c) { propAnimState[canvasId][c] = targetPcts[c]; });
+    }
 
-    function xPos(m) { return PAD.left + ((m - range.min) / (range.max - range.min)) * cW; }
-    function yPos(v) { return PAD.top + cH - (v / yMax) * cH; }
+    // Animate towards target
+    var current = propAnimState[canvasId];
+    var needsAnim = false;
+    CAT_ORDER.forEach(function (c) {
+      var diff = targetPcts[c] - current[c];
+      if (Math.abs(diff) > 0.1) {
+        current[c] += diff * 0.15;
+        needsAnim = true;
+      } else {
+        current[c] = targetPcts[c];
+      }
+    });
+
+    // Drawing
+    var PAD = { top: 8, right: 16, bottom: 8, left: 16 };
+    var barX = PAD.left;
+    var barW = Math.min(80, W * 0.2);
+    var barH = H - PAD.top - PAD.bottom;
+    var labelX = barX + barW + 16;
+    var labelW = W - labelX - PAD.right;
 
     ctx.clearRect(0, 0, W, H);
 
-    // Grid
-    ctx.strokeStyle = 'rgba(108,92,231,0.08)';
-    for (var v = 0; v <= yMax; v += Math.max(1, Math.floor(yMax / 4))) {
-      ctx.beginPath(); ctx.moveTo(PAD.left, yPos(v)); ctx.lineTo(W - PAD.right, yPos(v)); ctx.stroke();
-      ctx.fillStyle = 'rgba(108,92,231,0.5)';
-      ctx.font = '11px Varela Round'; ctx.textAlign = 'right';
-      ctx.fillText(v, PAD.left - 6, yPos(v) + 4);
-    }
+    // Draw stacked bar
+    var yOffset = PAD.top;
+    var activeCats = CAT_ORDER.filter(function (c) { return current[c] > 0.5; });
 
-    // X labels
-    months.forEach(function (m) {
-      ctx.fillStyle = 'rgba(108,92,231,0.6)';
-      ctx.font = '10px Varela Round'; ctx.textAlign = 'center';
-      ctx.fillText(m + 'ח\'', xPos(m), H - PAD.bottom + 16);
-    });
+    activeCats.forEach(function (c, i) {
+      var segH = (current[c] / 100) * barH;
+      if (segH < 1) return;
 
-    // Stacked areas
-    for (var ci = CAT_ORDER.length - 1; ci >= 0; ci--) {
-      var cat = CAT_ORDER[ci];
+      ctx.fillStyle = CAT_COLORS[c];
+      ctx.globalAlpha = 0.85;
+
+      // Rounded corners on first and last segments
+      var r = 8;
       ctx.beginPath();
-      for (var i = 0; i < monthData.length; i++) {
-        var d = monthData[i];
-        var base = 0;
-        for (var j = 0; j < ci; j++) base += d[CAT_ORDER[j]] || 0;
-        var top = base + (d[cat] || 0);
-        var x = xPos(d.month);
-        if (i === 0) ctx.moveTo(x, yPos(top));
-        else ctx.lineTo(x, yPos(top));
-      }
-      for (var i = monthData.length - 1; i >= 0; i--) {
-        var d = monthData[i];
-        var base = 0;
-        for (var j = 0; j < ci; j++) base += d[CAT_ORDER[j]] || 0;
-        ctx.lineTo(xPos(d.month), yPos(base));
+      if (i === 0 && i === activeCats.length - 1) {
+        // Single segment - all corners rounded
+        ctx.moveTo(barX + r, yOffset);
+        ctx.arcTo(barX + barW, yOffset, barX + barW, yOffset + segH, r);
+        ctx.arcTo(barX + barW, yOffset + segH, barX, yOffset + segH, r);
+        ctx.arcTo(barX, yOffset + segH, barX, yOffset, r);
+        ctx.arcTo(barX, yOffset, barX + barW, yOffset, r);
+      } else if (i === 0) {
+        ctx.moveTo(barX + r, yOffset);
+        ctx.arcTo(barX + barW, yOffset, barX + barW, yOffset + segH, r);
+        ctx.lineTo(barX + barW, yOffset + segH);
+        ctx.lineTo(barX, yOffset + segH);
+        ctx.arcTo(barX, yOffset, barX + barW, yOffset, r);
+      } else if (i === activeCats.length - 1) {
+        ctx.moveTo(barX, yOffset);
+        ctx.lineTo(barX + barW, yOffset);
+        ctx.arcTo(barX + barW, yOffset + segH, barX, yOffset + segH, r);
+        ctx.arcTo(barX, yOffset + segH, barX, yOffset, r);
+        ctx.lineTo(barX, yOffset);
+      } else {
+        ctx.rect(barX, yOffset, barW, segH);
       }
       ctx.closePath();
-      ctx.fillStyle = CAT_COLORS[cat];
-      ctx.globalAlpha = 0.6;
       ctx.fill();
       ctx.globalAlpha = 1;
-    }
 
-    // Slider marker
-    ctx.strokeStyle = 'rgba(45,27,105,0.3)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([5, 4]);
-    ctx.beginPath(); ctx.moveTo(xPos(maxAge), PAD.top); ctx.lineTo(xPos(maxAge), PAD.top + cH); ctx.stroke();
-    ctx.setLineDash([]);
+      // Percentage text inside bar if segment is tall enough
+      if (segH > 20) {
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 12px Secular One, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(Math.round(current[c]) + '%', barX + barW / 2, yOffset + segH / 2);
+      }
+
+      yOffset += segH;
+    });
+
+    // Draw labels on the right side with connecting lines
+    var labelYStart = PAD.top;
+    var labelSpacing = barH / Math.max(activeCats.length, 1);
+    yOffset = PAD.top;
+
+    activeCats.forEach(function (c, i) {
+      var segH = (current[c] / 100) * barH;
+      var segMid = yOffset + segH / 2;
+      var labelY = labelYStart + i * labelSpacing + labelSpacing / 2;
+
+      // Connecting line
+      ctx.strokeStyle = CAT_COLORS[c];
+      ctx.globalAlpha = 0.4;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(barX + barW + 4, segMid);
+      ctx.lineTo(labelX - 4, labelY);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      // Color dot
+      ctx.beginPath();
+      ctx.arc(labelX, labelY, 5, 0, Math.PI * 2);
+      ctx.fillStyle = CAT_COLORS[c];
+      ctx.fill();
+
+      // Category label
+      ctx.fillStyle = COLORS.deepPurple;
+      ctx.font = '13px Secular One, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      var countText = (cats[c] || []).length;
+      var pctText = Math.round(current[c]) + '%';
+      ctx.fillText(CAT_LABELS[c], labelX + labelW, labelY - 8);
+
+      // Count and percentage
+      ctx.fillStyle = COLORS.purple;
+      ctx.font = '11px Varela Round, sans-serif';
+      ctx.fillText(countText + ' מילים · ' + pctText, labelX + labelW, labelY + 10);
+
+      yOffset += segH;
+    });
+
+    if (needsAnim) {
+      requestAnimationFrame(function () {
+        drawProportionalBar(canvasId, maxAge);
+      });
+    }
   }
 
   // ==========================================
@@ -450,7 +551,6 @@
   // MAIN TRENDS CHART ENHANCEMENT
   // ==========================================
   function enhanceMainTrendsChart() {
-    // Add title above the existing trends chart
     var chartContainer = document.getElementById('trendsChart');
     if (!chartContainer) return;
     var existing = chartContainer.querySelector('.trends-chart-title');
@@ -470,7 +570,6 @@
     fetch('vocabulary.json')
       .then(function (r) { return r.json(); })
       .then(function (data) {
-        // Filter out future ages
         vocabData = data.filter(function (w) { return w.age_in_months <= BABY_MAX_AGE; });
         buildCards();
         enhanceMainTrendsChart();
@@ -486,7 +585,10 @@
     container.innerHTML = '';
 
     var range = getAgeRange();
-    var catLegend = CAT_ORDER.map(function (k) {
+    var activeCats = CAT_ORDER.filter(function (k) {
+      return vocabData.some(function (w) { return w.cdi_category === k; });
+    });
+    var catLegend = activeCats.map(function (k) {
       return { color: CAT_COLORS[k], label: CAT_LABELS[k] };
     });
     var subLegend = Object.keys(SUB_COLORS).filter(function (k) {
@@ -495,17 +597,19 @@
       return { color: SUB_COLORS[k], label: SUB_LABELS[k] };
     });
 
-    // Card 1: Stacked bars
+    // Card 1: Stacked bars (category evolution)
     var c1 = createCard('אבולוציית הקטגוריות', 'vchart1');
     container.appendChild(c1);
     setupSlider('vchart1', range, function (age) { drawStackedBars('vchart1', age); });
     buildLegend('vchart1', catLegend);
 
-    // Card 2: Absolute stacked area
-    var c2 = createCard('צמיחת הקטגוריות (מוחלט)', 'vchart2');
+    // Card 2: Proportional bar (relative percentages)
+    var c2 = createCard('חלוקה יחסית של הקטגוריות', 'vchart2');
     container.appendChild(c2);
-    setupSlider('vchart2', range, function (age) { drawAbsoluteArea('vchart2', age); });
-    buildLegend('vchart2', catLegend);
+    setupSlider('vchart2', range, function (age) {
+      propAnimState['vchart2'] = propAnimState['vchart2'] || {};
+      drawProportionalBar('vchart2', age);
+    });
 
     // Card 3: Bubble map
     var c3 = createCard('מפת תשומת הלב', 'vchart3');
