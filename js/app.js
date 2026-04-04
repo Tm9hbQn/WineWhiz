@@ -303,12 +303,24 @@ function setupEventListeners() {
       linkResults.classList.add('hidden');
       return;
     }
-    const matches = words.filter((w) =>
-      w.id !== editingWordId && fuzzyMatchWord(q, w)
-    ).slice(0, 8);
+    // Simple search: substring match on word name, then fuzzy fallback
+    const matches = words.filter((w) => {
+      if (w.id === editingWordId) return false;
+      const wordLower = w.word.toLowerCase();
+      const qLower = q.toLowerCase();
+      if (wordLower.includes(qLower) || qLower.includes(wordLower)) return true;
+      return fuzzyMatchWord(q, w);
+    }).slice(0, 8);
+
     linkResults.innerHTML = '';
     if (matches.length === 0) {
-      linkResults.classList.add('hidden');
+      const noResult = document.createElement('div');
+      noResult.className = 'link-result-item';
+      noResult.style.opacity = '0.5';
+      noResult.style.cursor = 'default';
+      noResult.textContent = 'לא נמצאו מילים';
+      linkResults.appendChild(noResult);
+      linkResults.classList.remove('hidden');
       return;
     }
     matches.forEach((w) => {
@@ -321,7 +333,9 @@ function setupEventListeners() {
       ageSpan.textContent = w.age_months !== null ? ageMonthsToHebrew(w.age_months) : '';
       item.appendChild(nameSpan);
       item.appendChild(ageSpan);
-      item.addEventListener('click', () => {
+      item.addEventListener('mousedown', (e) => {
+        // Use mousedown instead of click to fire before blur
+        e.preventDefault();
         editingLinkedTo = w.id;
         updateLinkUI();
         linkSearchInput.value = '';
@@ -333,8 +347,8 @@ function setupEventListeners() {
   });
 
   linkSearchInput.addEventListener('blur', () => {
-    // Delay to allow click on results
-    setTimeout(() => linkResults.classList.add('hidden'), 200);
+    // Longer delay for mobile to allow tap on results
+    setTimeout(() => linkResults.classList.add('hidden'), 400);
   });
 
   linkRemoveBtn.addEventListener('click', () => {
@@ -347,6 +361,12 @@ function setupEventListeners() {
     searchQuery = searchInput.value.trim();
     searchClear.classList.toggle('hidden', !searchQuery);
     renderWords();
+    // Keep search + results visible above keyboard on mobile
+    if (searchQuery) {
+      setTimeout(() => {
+        searchInput.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
   });
   searchClear.addEventListener('click', () => {
     searchInput.value = '';
@@ -359,6 +379,27 @@ function setupEventListeners() {
   const timelineScroll = $('#timelineScroll');
   if (timelineScroll) {
     timelineScroll.addEventListener('scroll', onTimelineScroll, { passive: true });
+
+    // Allow page scroll when timeline is at top/bottom boundary
+    let lastTouchY = 0;
+    timelineScroll.addEventListener('touchstart', (e) => {
+      lastTouchY = e.touches[0].clientY;
+    }, { passive: true });
+
+    timelineScroll.addEventListener('touchmove', (e) => {
+      const dy = lastTouchY - e.touches[0].clientY; // positive = scrolling down
+      const atTop = timelineScroll.scrollTop <= 0;
+      const atBottom = timelineScroll.scrollTop + timelineScroll.clientHeight >= timelineScroll.scrollHeight - 1;
+
+      if ((atTop && dy < 0) || (atBottom && dy > 0)) {
+        // At boundary, let the page scroll by briefly disabling timeline overflow
+        timelineScroll.style.overflowY = 'hidden';
+        requestAnimationFrame(() => {
+          timelineScroll.style.overflowY = 'auto';
+        });
+      }
+      lastTouchY = e.touches[0].clientY;
+    }, { passive: true });
   }
 }
 
