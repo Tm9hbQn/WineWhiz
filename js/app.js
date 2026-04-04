@@ -759,7 +759,7 @@ function renderWords() {
       if (chain.length > 1) {
         const linkEl = document.createElement('div');
         linkEl.className = 'word-card-link';
-        linkEl.textContent = chain.map((c) => c.word).join(' ← ');
+        linkEl.textContent = chain.map((c) => c.word).join(' → ');
         linkEl.addEventListener('click', (e) => {
           e.stopPropagation();
           openEvoModal(w.id);
@@ -926,11 +926,11 @@ function openEditModal(word) {
       col.appendChild(ageEl);
       evoTimeline.appendChild(col);
 
-      // Arrow between items (RTL: ← direction)
+      // Arrow between items (RTL: → direction, youngest right to oldest left)
       if (i < chain.length - 1) {
         const arrow = document.createElement('div');
         arrow.className = 'evo-mini-arrow';
-        arrow.textContent = '←';
+        arrow.textContent = '→';
         evoTimeline.appendChild(arrow);
       }
     });
@@ -1304,7 +1304,7 @@ function renderTimeline() {
       if (tlChain.length > 1) {
         const linkEl = document.createElement('div');
         linkEl.className = 'timeline-card-link';
-        linkEl.textContent = tlChain.map((c) => c.word).join(' ← ');
+        linkEl.textContent = tlChain.map((c) => c.word).join(' → ');
         linkEl.addEventListener('click', (e) => {
           e.stopPropagation();
           openEvoModal(w.id);

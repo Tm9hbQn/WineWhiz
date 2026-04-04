@@ -1075,7 +1075,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0;
-  direction: ltr;
+  direction: rtl;
 }
 
 .evo-mini-col {
