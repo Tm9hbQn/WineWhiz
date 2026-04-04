@@ -1238,6 +1238,10 @@ body {
   color: #E53935;
 }
 
+.link-search-wrap {
+  position: relative;
+}
+
 .link-search-input {
   width: 100%;
   font-family: 'Varela Round', sans-serif;
@@ -1259,16 +1263,16 @@ body {
 
 .link-results {
   position: absolute;
-  top: 100%;
+  bottom: 100%;
   left: 0;
   right: 0;
   background: white;
   border-radius: 14px;
   box-shadow: 0 8px 30px rgba(45, 27, 105, 0.15);
-  max-height: 160px;
+  max-height: 200px;
   overflow-y: auto;
   z-index: 10;
-  margin-top: 0.3rem;
+  margin-bottom: 0.3rem;
 }
 
 .link-result-item {
@@ -1297,39 +1301,66 @@ body {
   color: var(--soft-purple);
 }
 
-/* Timeline evolution connector */
+/* Timeline linked word items - slightly offset and tinted */
+.timeline-item-linked {
+  --link-offset: 8px;
+}
+
+.timeline-item-linked:nth-child(odd) {
+  padding-left: calc(55% + var(--link-offset));
+}
+
+.timeline-item-linked:nth-child(even) {
+  padding-right: calc(55% + var(--link-offset));
+}
+
+.timeline-item-linked .timeline-card {
+  background: linear-gradient(135deg, #F3E5F5 0%, #FCE4EC 100%);
+  border: 1.5px solid rgba(108, 92, 231, 0.12);
+}
+
+.timeline-item-linked .timeline-card-link {
+  cursor: pointer;
+  opacity: 1;
+  color: var(--hot-pink);
+  font-weight: 600;
+}
+
+/* Highlight animation when scrolled-to */
+.timeline-item-highlight .timeline-card {
+  animation: cardHighlight 1.5s ease;
+}
+
+@keyframes cardHighlight {
+  0% { box-shadow: 0 0 0 0 rgba(108, 92, 231, 0.4); }
+  30% { box-shadow: 0 0 0 8px rgba(108, 92, 231, 0.2); transform: scale(1.03); }
+  100% { box-shadow: var(--card-shadow); transform: scale(1); }
+}
+
+/* Timeline evolution dashed connector */
 .timeline-evolution {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   position: relative;
+  height: 22px;
 }
 
 .timeline-evo-line {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.2rem;
-  color: var(--soft-purple);
-  font-size: 0.75rem;
-  font-family: 'Varela Round', sans-serif;
-  opacity: 0.7;
-}
-
-.timeline-evo-line::before {
-  content: '';
+  position: absolute;
+  right: calc(50% - 1px);
+  top: 0;
+  bottom: 0;
   width: 2px;
-  height: 12px;
-  background: linear-gradient(180deg, var(--hot-pink), var(--soft-purple));
-  border-radius: 1px;
-}
-
-.timeline-evo-line::after {
-  content: '';
-  width: 2px;
-  height: 12px;
-  background: linear-gradient(180deg, var(--soft-purple), var(--teal));
+  background: repeating-linear-gradient(
+    180deg,
+    var(--soft-purple) 0px,
+    var(--soft-purple) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  opacity: 0.45;
   border-radius: 1px;
 }
 
@@ -2005,6 +2036,16 @@ body {
   .timeline-item:nth-child(even) {
     padding-right: 0;
     padding-left: calc(50% + 1.2rem);
+  }
+
+  .timeline-item-linked:nth-child(odd) {
+    padding-right: calc(50% + 1.2rem + var(--link-offset));
+    padding-left: 0;
+  }
+
+  .timeline-item-linked:nth-child(even) {
+    padding-left: calc(50% + 1.2rem + var(--link-offset));
+    padding-right: 0;
   }
 
   .words-grid {

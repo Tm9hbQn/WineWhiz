@@ -370,10 +370,16 @@ function setupEventListeners() {
   });
 
   linkSearchInput.addEventListener('focus', () => {
-    // Scroll the input into view so results aren't hidden behind mobile keyboard
+    // Scroll the modal so the input is near the top, leaving room for results above keyboard
     setTimeout(() => {
-      linkSearchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 300);
+      const modalContent = linkSearchInput.closest('.modal-content');
+      if (modalContent) {
+        // Scroll the link field to the top of the modal's visible area
+        const field = linkSearchInput.closest('.modal-field') || linkSearchInput;
+        const fieldTop = field.offsetTop;
+        modalContent.scrollTo({ top: fieldTop - 10, behavior: 'smooth' });
+      }
+    }, 350);
   });
 
   linkSearchInput.addEventListener('blur', () => {
@@ -1266,11 +1272,39 @@ function renderTimeline() {
     return;
   }
 
+  // Build a set of word IDs that are part of any evolution chain
+  const linkedWordIds = new Set();
+  // Map from word ID to its direct linked neighbors (for scroll-to)
+  const wordNeighbors = new Map();
+  sorted.forEach((w) => {
+    const hasLink = w.linked_to || words.some((o) => o.linked_to === w.id);
+    if (hasLink) {
+      const chain = getEvolutionChain(w.id);
+      if (chain.length > 1) {
+        chain.forEach((c) => linkedWordIds.add(c.id));
+        // Find this word's position in the chain and store neighbors
+        const idx = chain.findIndex((c) => c.id === w.id);
+        const neighbors = [];
+        if (idx > 0) neighbors.push(chain[idx - 1].id);
+        if (idx < chain.length - 1) neighbors.push(chain[idx + 1].id);
+        wordNeighbors.set(w.id, neighbors);
+      }
+    }
+  });
+
+  // Map word IDs to their timeline DOM elements for scroll-to
+  const wordItemMap = new Map();
+
   sorted.forEach((w, i) => {
+    const isLinked = linkedWordIds.has(w.id);
+
     const item = document.createElement('div');
-    item.className = 'timeline-item reveal-on-scroll';
+    item.className = 'timeline-item reveal-on-scroll' + (isLinked ? ' timeline-item-linked' : '');
     item.style.setProperty('--reveal-delay', `${Math.min(i * 0.08, 0.5)}s`);
     item.dataset.ageMonths = w.age_months ?? 0;
+    item.dataset.wordId = w.id;
+
+    wordItemMap.set(w.id, item);
 
     const dot = document.createElement('div');
     dot.className = 'timeline-dot';
@@ -1297,9 +1331,8 @@ function renderTimeline() {
       card.appendChild(notesEl);
     }
 
-    // Show link indicator if part of any chain
-    const hasTlLink = w.linked_to || words.some((o) => o.linked_to === w.id);
-    if (hasTlLink) {
+    // Show link indicator with scroll-to-neighbor on tap
+    if (isLinked) {
       const tlChain = getEvolutionChain(w.id);
       if (tlChain.length > 1) {
         const linkEl = document.createElement('div');
@@ -1307,7 +1340,18 @@ function renderTimeline() {
         linkEl.textContent = tlChain.map((c) => c.word).join(' → ');
         linkEl.addEventListener('click', (e) => {
           e.stopPropagation();
-          openEvoModal(w.id);
+          // Scroll to the nearest neighbor in the timeline
+          const neighbors = wordNeighbors.get(w.id) || [];
+          for (const nId of neighbors) {
+            const neighborEl = timelineTrack.querySelector(`[data-word-id="${nId}"]`);
+            if (neighborEl) {
+              neighborEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              // Briefly highlight the neighbor
+              neighborEl.classList.add('timeline-item-highlight');
+              setTimeout(() => neighborEl.classList.remove('timeline-item-highlight'), 1500);
+              break;
+            }
+          }
         });
         card.appendChild(linkEl);
       }
@@ -1317,17 +1361,15 @@ function renderTimeline() {
     item.appendChild(card);
     timelineTrack.appendChild(item);
 
-    // Check if next word in sorted list is linked to this one (evolution connector)
+    // Dashed connector to next word if they are linked
     const nextIdx = i + 1;
     if (nextIdx < sorted.length) {
       const nextWord = sorted[nextIdx];
-      // Show connector if this word links to next, or next links to this
       if (w.linked_to === nextWord.id || nextWord.linked_to === w.id) {
         const evo = document.createElement('div');
         evo.className = 'timeline-evolution';
         const evoLine = document.createElement('div');
         evoLine.className = 'timeline-evo-line';
-        evoLine.textContent = '↕';
         evo.appendChild(evoLine);
         timelineTrack.appendChild(evo);
       }
