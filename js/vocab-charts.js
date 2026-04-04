@@ -1,17 +1,30 @@
 /* =============================================
    Vocabulary Analysis Charts - Wordbydandan
-   4 interactive cards with time sliders
+   Smooth animations, site palette, mobile-first
    ============================================= */
 (function () {
   'use strict';
 
   var vocabData = [];
+
+  // Site palette
+  var COLORS = {
+    purple: '#6C5CE7',
+    pink: '#FF6B9D',
+    teal: '#4ECDC4',
+    yellow: '#FFD93D',
+    coral: '#FF8A80',
+    lavender: '#F3E5F5',
+    deepPurple: '#2D1B69',
+    bg: '#FFF9FB',
+  };
+
   var CAT_COLORS = {
-    specific_nominals: '#FF6B9D',
-    general_nominals: '#6C5CE7',
-    action_words: '#4ECDC4',
-    descriptive_words: '#FFD93D',
-    social_routines: '#FF8A80',
+    specific_nominals: COLORS.pink,
+    general_nominals: COLORS.purple,
+    action_words: COLORS.teal,
+    descriptive_words: COLORS.yellow,
+    social_routines: COLORS.coral,
     unclear: '#B0BEC5',
   };
   var CAT_LABELS = {
@@ -22,6 +35,8 @@
     social_routines: 'שגרות חברתיות',
     unclear: 'לא ברור',
   };
+  var CAT_ORDER = ['specific_nominals', 'general_nominals', 'action_words', 'descriptive_words', 'social_routines'];
+
   var SUB_COLORS = {
     people: '#FF6B9D', animals: '#6C5CE7', food: '#FFD93D',
     clothing: '#4ECDC4', household: '#FF8A80', nature: '#81C784',
@@ -37,6 +52,9 @@
     unclear: 'לא ברור',
   };
 
+  // Baby's current age
+  var BABY_MAX_AGE = 16; // months (as of April 2026)
+
   // ==========================================
   // DATA HELPERS
   // ==========================================
@@ -47,9 +65,9 @@
   function getCategories(words) {
     var cats = {};
     words.forEach(function (w) {
-      var c = w.cdi_category;
-      if (!cats[c]) cats[c] = [];
-      cats[c].push(w);
+      if (w.cdi_category === 'unclear') return;
+      if (!cats[w.cdi_category]) cats[w.cdi_category] = [];
+      cats[w.cdi_category].push(w);
     });
     return cats;
   }
@@ -57,240 +75,320 @@
   function getSubCategories(words) {
     var subs = {};
     words.forEach(function (w) {
-      var s = w.sub_category;
-      if (!subs[s]) subs[s] = [];
-      subs[s].push(w);
+      if (w.sub_category === 'unclear') return;
+      if (!subs[w.sub_category]) subs[w.sub_category] = [];
+      subs[w.sub_category].push(w);
     });
     return subs;
   }
 
   function getAgeRange() {
-    if (!vocabData.length) return { min: 10, max: 16 };
+    if (!vocabData.length) return { min: 10, max: BABY_MAX_AGE };
     var ages = vocabData.map(function (w) { return w.age_in_months; });
-    return { min: Math.min.apply(null, ages), max: Math.max.apply(null, ages) };
+    return { min: Math.min.apply(null, ages), max: Math.min(Math.max.apply(null, ages), BABY_MAX_AGE) };
   }
 
-  function getMonthTicks(min, max) {
-    var ticks = [];
-    for (var m = Math.floor(min); m <= Math.ceil(max); m++) ticks.push(m);
-    return ticks;
+  function ageToHebrew(m) {
+    if (m < 12) return m + ' חודשים';
+    var y = Math.floor(m / 12);
+    var r = m % 12;
+    if (r === 0) return y === 1 ? 'שנה' : y + ' שנים';
+    return (y === 1 ? 'שנה' : y + ' שנים') + ' ו-' + r + ' חו\'';
   }
 
   // ==========================================
-  // CHART RENDERING
+  // CARD BUILDER
   // ==========================================
-
-  function createCard(title, id) {
+  function createCard(title, id, hasSlider) {
     var card = document.createElement('div');
     card.className = 'vocab-card';
-    card.innerHTML =
-      '<h3 class="vocab-card-title">' + title + '</h3>' +
-      '<div class="vocab-chart-wrap"><canvas id="' + id + '" width="600" height="250"></canvas></div>' +
-      '<div class="vocab-slider-row">' +
-      '  <span class="vocab-slider-label" id="' + id + 'Label"></span>' +
-      '  <input type="range" class="vocab-slider" id="' + id + 'Slider">' +
-      '</div>' +
-      '<div class="vocab-stats" id="' + id + 'Stats"></div>' +
-      '<div class="vocab-legend" id="' + id + 'Legend"></div>';
+    var h = '<h3 class="vocab-card-title">' + title + '</h3>';
+    h += '<div class="vocab-chart-wrap"><canvas id="' + id + '"></canvas></div>';
+    if (hasSlider !== false) {
+      h += '<div class="vocab-slider-row">' +
+        '<span class="vocab-slider-label" id="' + id + 'Lbl"></span>' +
+        '<input type="range" class="vocab-slider" id="' + id + 'Sld">' +
+        '</div>';
+    }
+    h += '<div class="vocab-tooltip-area" id="' + id + 'Tip"></div>';
+    h += '<div class="vocab-legend" id="' + id + 'Leg"></div>';
+    card.innerHTML = h;
     return card;
   }
 
-  // Draw stacked area chart (relative or absolute)
-  function drawStackedArea(canvasId, maxAge, relative) {
+  function setupSlider(id, range, onUpdate) {
+    var sld = document.getElementById(id + 'Sld');
+    var lbl = document.getElementById(id + 'Lbl');
+    if (!sld) return;
+    sld.min = range.min;
+    sld.max = range.max;
+    sld.step = 1;
+    sld.value = range.max;
+    function upd() {
+      var v = parseInt(sld.value);
+      lbl.textContent = ageToHebrew(v);
+      onUpdate(v);
+    }
+    sld.addEventListener('input', upd);
+    upd();
+  }
+
+  function buildLegend(id, items) {
+    var el = document.getElementById(id + 'Leg');
+    if (!el) return;
+    el.innerHTML = '';
+    items.forEach(function (item) {
+      var s = document.createElement('span');
+      s.className = 'vocab-legend-item';
+      s.innerHTML = '<span class="vocab-legend-dot" style="background:' + item.color + '"></span>' + item.label;
+      el.appendChild(s);
+    });
+  }
+
+  // ==========================================
+  // CHART 1: STACKED BARS (category evolution)
+  // ==========================================
+  function drawStackedBars(canvasId, maxAge) {
     var canvas = document.getElementById(canvasId);
     if (!canvas) return;
+    var dpr = window.devicePixelRatio || 1;
+    var W = canvas.parentElement.offsetWidth;
+    var H = 280;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
     var ctx = canvas.getContext('2d');
-    var W = canvas.width, H = canvas.height;
-    var PAD = { top: 10, right: 10, bottom: 30, left: 40 };
+    ctx.scale(dpr, dpr);
+
+    var PAD = { top: 12, right: 12, bottom: 36, left: 38 };
     var cW = W - PAD.left - PAD.right;
     var cH = H - PAD.top - PAD.bottom;
     var range = getAgeRange();
-    var ticks = getMonthTicks(range.min, range.max);
 
-    ctx.clearRect(0, 0, W, H);
-    ctx.font = '11px Varela Round, sans-serif';
+    // Build data per month
+    var months = [];
+    for (var m = range.min; m <= Math.min(maxAge, range.max); m++) months.push(m);
 
-    // Calculate data per month
-    var catOrder = ['specific_nominals', 'general_nominals', 'action_words', 'descriptive_words', 'social_routines', 'unclear'];
-    var monthData = [];
-    ticks.forEach(function (m) {
-      if (m > maxAge) return;
+    var maxTotal = 0;
+    var monthData = months.map(function (m) {
       var words = getWordsUpTo(m);
       var cats = getCategories(words);
-      var total = words.length || 1;
-      var row = { month: m, total: words.length };
-      catOrder.forEach(function (c) {
-        var count = (cats[c] || []).length;
-        row[c] = relative ? (count / total) * 100 : count;
+      var row = { month: m };
+      var total = 0;
+      CAT_ORDER.forEach(function (c) {
+        row[c] = (cats[c] || []).length;
+        total += row[c];
       });
-      monthData.push(row);
+      row.total = total;
+      if (total > maxTotal) maxTotal = total;
+      return row;
+    });
+
+    if (!months.length) return;
+
+    var barW = Math.max(8, Math.min(36, (cW / months.length) - 4));
+    var gap = (cW - barW * months.length) / (months.length + 1);
+    var yMax = Math.ceil(maxTotal / 5) * 5 || 5;
+
+    function xPos(i) { return PAD.left + gap + i * (barW + gap) + barW / 2; }
+    function yPos(v) { return PAD.top + cH - (v / yMax) * cH; }
+
+    ctx.clearRect(0, 0, W, H);
+
+    // Grid lines
+    ctx.strokeStyle = 'rgba(108,92,231,0.08)';
+    ctx.lineWidth = 1;
+    for (var v = 0; v <= yMax; v += Math.max(1, Math.floor(yMax / 4))) {
+      ctx.beginPath();
+      ctx.moveTo(PAD.left, yPos(v));
+      ctx.lineTo(W - PAD.right, yPos(v));
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(108,92,231,0.5)';
+      ctx.font = '11px Varela Round, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(v, PAD.left - 6, yPos(v) + 4);
+    }
+
+    // Bars
+    monthData.forEach(function (d, i) {
+      var x = PAD.left + gap + i * (barW + gap);
+      var base = yPos(0);
+      var stack = 0;
+      CAT_ORDER.forEach(function (c) {
+        var count = d[c] || 0;
+        if (count === 0) return;
+        var barH = (count / yMax) * cH;
+        var y = base - (stack / yMax) * cH - barH;
+        // Rounded corners on top segment
+        ctx.fillStyle = CAT_COLORS[c];
+        ctx.globalAlpha = 0.85;
+        ctx.beginPath();
+        var r = Math.min(3, barW / 4);
+        ctx.moveTo(x, y + r);
+        ctx.arcTo(x, y, x + barW, y, r);
+        ctx.arcTo(x + barW, y, x + barW, y + barH, r);
+        ctx.lineTo(x + barW, y + barH);
+        ctx.lineTo(x, y + barH);
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        stack += count;
+      });
+
+      // Month label
+      ctx.fillStyle = 'rgba(108,92,231,0.6)';
+      ctx.font = '10px Varela Round, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(d.month + 'ח\'', x + barW / 2, H - PAD.bottom + 16);
+    });
+
+    // Touch/click tooltip
+    canvas.onclick = function (e) {
+      var rect = canvas.getBoundingClientRect();
+      var mx = (e.clientX - rect.left);
+      var tipEl = document.getElementById(canvasId + 'Tip');
+      if (!tipEl) return;
+
+      // Find closest bar
+      var closest = -1, minDist = Infinity;
+      monthData.forEach(function (d, i) {
+        var bx = PAD.left + gap + i * (barW + gap) + barW / 2;
+        var dist = Math.abs(mx - bx);
+        if (dist < minDist) { minDist = dist; closest = i; }
+      });
+
+      if (closest < 0 || minDist > barW * 2) { tipEl.innerHTML = ''; return; }
+      var d = monthData[closest];
+      var words = getWordsUpTo(d.month);
+      var cats = getCategories(words);
+
+      var html = '<div class="vocab-tip-card">';
+      html += '<div class="vocab-tip-title">' + ageToHebrew(d.month) + ' — ' + d.total + ' מילים</div>';
+      CAT_ORDER.forEach(function (c) {
+        var list = cats[c] || [];
+        if (!list.length) return;
+        var examples = list.slice(-3).map(function (w) { return w.word; }).join(', ');
+        html += '<div class="vocab-tip-row"><span class="vocab-legend-dot" style="background:' + CAT_COLORS[c] + '"></span>' +
+          CAT_LABELS[c] + ': <strong>' + list.length + '</strong> <span class="vocab-tip-ex">(' + examples + ')</span></div>';
+      });
+      html += '</div>';
+      tipEl.innerHTML = html;
+    };
+  }
+
+  // ==========================================
+  // CHART 2: ABSOLUTE STACKED AREA
+  // ==========================================
+  function drawAbsoluteArea(canvasId, maxAge) {
+    var canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    var dpr = window.devicePixelRatio || 1;
+    var W = canvas.parentElement.offsetWidth;
+    var H = 260;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    var ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    var PAD = { top: 12, right: 12, bottom: 36, left: 38 };
+    var cW = W - PAD.left - PAD.right;
+    var cH = H - PAD.top - PAD.bottom;
+    var range = getAgeRange();
+
+    var months = [];
+    for (var m = range.min; m <= Math.min(maxAge, range.max); m++) months.push(m);
+
+    var maxTotal = 0;
+    var monthData = months.map(function (m) {
+      var words = getWordsUpTo(m);
+      var cats = getCategories(words);
+      var row = { month: m };
+      var total = 0;
+      CAT_ORDER.forEach(function (c) {
+        row[c] = (cats[c] || []).length;
+        total += row[c];
+      });
+      row.total = total;
+      if (total > maxTotal) maxTotal = total;
+      return row;
     });
 
     if (monthData.length < 2) return;
-
-    var maxY = relative ? 100 : Math.max.apply(null, monthData.map(function (d) {
-      var sum = 0; catOrder.forEach(function (c) { sum += d[c] || 0; }); return sum;
-    }));
+    var yMax = Math.ceil(maxTotal / 5) * 5 || 5;
 
     function xPos(m) { return PAD.left + ((m - range.min) / (range.max - range.min)) * cW; }
-    function yPos(v) { return PAD.top + cH - (v / (maxY || 1)) * cH; }
+    function yPos(v) { return PAD.top + cH - (v / yMax) * cH; }
 
-    // Draw axes
-    ctx.strokeStyle = 'rgba(109,92,231,0.15)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(PAD.left, PAD.top); ctx.lineTo(PAD.left, PAD.top + cH); ctx.lineTo(PAD.left + cW, PAD.top + cH);
-    ctx.stroke();
+    ctx.clearRect(0, 0, W, H);
 
-    // Y axis labels
-    ctx.fillStyle = '#6C5CE7';
-    ctx.textAlign = 'right';
-    var ySteps = relative ? [0, 25, 50, 75, 100] : [0, Math.round(maxY / 2), maxY];
-    ySteps.forEach(function (v) {
-      ctx.fillText((relative ? v + '%' : v), PAD.left - 4, yPos(v) + 4);
+    // Grid
+    ctx.strokeStyle = 'rgba(108,92,231,0.08)';
+    for (var v = 0; v <= yMax; v += Math.max(1, Math.floor(yMax / 4))) {
+      ctx.beginPath(); ctx.moveTo(PAD.left, yPos(v)); ctx.lineTo(W - PAD.right, yPos(v)); ctx.stroke();
+      ctx.fillStyle = 'rgba(108,92,231,0.5)';
+      ctx.font = '11px Varela Round'; ctx.textAlign = 'right';
+      ctx.fillText(v, PAD.left - 6, yPos(v) + 4);
+    }
+
+    // X labels
+    months.forEach(function (m) {
+      ctx.fillStyle = 'rgba(108,92,231,0.6)';
+      ctx.font = '10px Varela Round'; ctx.textAlign = 'center';
+      ctx.fillText(m + 'ח\'', xPos(m), H - PAD.bottom + 16);
     });
 
-    // X axis labels
-    ctx.textAlign = 'center';
-    ticks.forEach(function (m) {
-      if (m <= maxAge) ctx.fillText(m + 'ח', xPos(m), PAD.top + cH + 18);
-    });
-
-    // Draw stacked areas (bottom to top)
-    for (var ci = catOrder.length - 1; ci >= 0; ci--) {
+    // Stacked areas
+    for (var ci = CAT_ORDER.length - 1; ci >= 0; ci--) {
+      var cat = CAT_ORDER[ci];
       ctx.beginPath();
-      var cat = catOrder[ci];
-      // Bottom line
       for (var i = 0; i < monthData.length; i++) {
         var d = monthData[i];
         var base = 0;
-        for (var j = 0; j < ci; j++) base += d[catOrder[j]] || 0;
+        for (var j = 0; j < ci; j++) base += d[CAT_ORDER[j]] || 0;
         var top = base + (d[cat] || 0);
         var x = xPos(d.month);
         if (i === 0) ctx.moveTo(x, yPos(top));
         else ctx.lineTo(x, yPos(top));
       }
-      // Back along bottom
       for (var i = monthData.length - 1; i >= 0; i--) {
         var d = monthData[i];
         var base = 0;
-        for (var j = 0; j < ci; j++) base += d[catOrder[j]] || 0;
+        for (var j = 0; j < ci; j++) base += d[CAT_ORDER[j]] || 0;
         ctx.lineTo(xPos(d.month), yPos(base));
       }
       ctx.closePath();
-      ctx.fillStyle = CAT_COLORS[cat] || '#ccc';
-      ctx.globalAlpha = 0.7;
+      ctx.fillStyle = CAT_COLORS[cat];
+      ctx.globalAlpha = 0.6;
       ctx.fill();
       ctx.globalAlpha = 1;
     }
 
-    // Slider marker line
-    ctx.strokeStyle = 'rgba(45,27,105,0.4)';
+    // Slider marker
+    ctx.strokeStyle = 'rgba(45,27,105,0.3)';
     ctx.lineWidth = 2;
-    ctx.setLineDash([4, 3]);
-    ctx.beginPath();
-    ctx.moveTo(xPos(maxAge), PAD.top);
-    ctx.lineTo(xPos(maxAge), PAD.top + cH);
-    ctx.stroke();
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath(); ctx.moveTo(xPos(maxAge), PAD.top); ctx.lineTo(xPos(maxAge), PAD.top + cH); ctx.stroke();
     ctx.setLineDash([]);
   }
 
-  // Draw line chart (growth curve)
-  function drawGrowthLine(canvasId, markerAge) {
+  // ==========================================
+  // CHART 3: BUBBLE MAP (sub-categories)
+  // ==========================================
+  function drawBubbleMap(canvasId, maxAge) {
     var canvas = document.getElementById(canvasId);
     if (!canvas) return;
+    var dpr = window.devicePixelRatio || 1;
+    var W = canvas.parentElement.offsetWidth;
+    var H = 320;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
     var ctx = canvas.getContext('2d');
-    var W = canvas.width, H = canvas.height;
-    var PAD = { top: 10, right: 10, bottom: 30, left: 40 };
-    var cW = W - PAD.left - PAD.right;
-    var cH = H - PAD.top - PAD.bottom;
-    var range = getAgeRange();
-    var ticks = getMonthTicks(range.min, range.max);
-
-    ctx.clearRect(0, 0, W, H);
-    ctx.font = '11px Varela Round, sans-serif';
-
-    // Data: cumulative word count at each month
-    var points = [];
-    ticks.forEach(function (m) {
-      points.push({ month: m, count: getWordsUpTo(m).length });
-    });
-
-    var maxY = Math.max.apply(null, points.map(function (p) { return p.count; })) || 1;
-
-    function xPos(m) { return PAD.left + ((m - range.min) / (range.max - range.min)) * cW; }
-    function yPos(v) { return PAD.top + cH - (v / maxY) * cH; }
-
-    // Axes
-    ctx.strokeStyle = 'rgba(109,92,231,0.15)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(PAD.left, PAD.top); ctx.lineTo(PAD.left, PAD.top + cH); ctx.lineTo(PAD.left + cW, PAD.top + cH);
-    ctx.stroke();
-
-    ctx.fillStyle = '#6C5CE7';
-    ctx.textAlign = 'right';
-    [0, Math.round(maxY / 2), maxY].forEach(function (v) {
-      ctx.fillText(v, PAD.left - 4, yPos(v) + 4);
-    });
-    ctx.textAlign = 'center';
-    ticks.forEach(function (m) {
-      ctx.fillText(m + 'ח', xPos(m), PAD.top + cH + 18);
-    });
-
-    // Fill area under curve
-    ctx.beginPath();
-    ctx.moveTo(xPos(points[0].month), yPos(0));
-    points.forEach(function (p) { ctx.lineTo(xPos(p.month), yPos(p.count)); });
-    ctx.lineTo(xPos(points[points.length - 1].month), yPos(0));
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(108,92,231,0.08)';
-    ctx.fill();
-
-    // Line
-    ctx.beginPath();
-    points.forEach(function (p, i) {
-      if (i === 0) ctx.moveTo(xPos(p.month), yPos(p.count));
-      else ctx.lineTo(xPos(p.month), yPos(p.count));
-    });
-    ctx.strokeStyle = '#6C5CE7';
-    ctx.lineWidth = 3;
-    ctx.lineJoin = 'round';
-    ctx.stroke();
-
-    // Dots
-    points.forEach(function (p) {
-      ctx.beginPath();
-      ctx.arc(xPos(p.month), yPos(p.count), 4, 0, Math.PI * 2);
-      ctx.fillStyle = p.month <= markerAge ? '#FF6B9D' : 'rgba(108,92,231,0.2)';
-      ctx.fill();
-    });
-
-    // Marker line
-    ctx.strokeStyle = '#FF6B9D';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([5, 3]);
-    ctx.beginPath();
-    ctx.moveTo(xPos(markerAge), PAD.top);
-    ctx.lineTo(xPos(markerAge), PAD.top + cH);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Marker count label
-    var markerCount = getWordsUpTo(markerAge).length;
-    ctx.fillStyle = '#FF6B9D';
-    ctx.font = 'bold 14px Secular One, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(markerCount + ' מילים', xPos(markerAge), PAD.top - 2);
-  }
-
-  // Draw treemap / bubble chart
-  function drawBubbles(canvasId, maxAge) {
-    var canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-    var ctx = canvas.getContext('2d');
-    var W = canvas.width, H = canvas.height;
-
+    ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, W, H);
 
     var words = getWordsUpTo(maxAge);
@@ -300,73 +398,69 @@
     }).sort(function (a, b) { return b.count - a.count; });
 
     if (!entries.length) return;
-
-    var maxCount = entries[0].count;
+    var maxCount = Math.max.apply(null, entries.map(function (e) { return e.count; }));
     var cx = W / 2, cy = H / 2;
-    var maxR = Math.min(W, H) * 0.22;
+    var maxR = Math.min(W, H) * 0.2;
 
-    // Simple circle packing layout
+    // Simple spiral layout
     var placed = [];
     entries.forEach(function (e, i) {
-      var r = Math.max(16, (e.count / maxCount) * maxR);
-      var angle = (i / entries.length) * Math.PI * 2 + Math.PI / 4;
-      var dist = i === 0 ? 0 : 40 + i * 22;
+      var r = Math.max(22, (e.count / maxCount) * maxR);
+      var angle = i * 2.4 + 0.5;
+      var dist = i === 0 ? 0 : 50 + i * 28;
       var x = cx + Math.cos(angle) * dist;
       var y = cy + Math.sin(angle) * dist;
-      // Clamp to canvas
-      x = Math.max(r + 5, Math.min(W - r - 5, x));
-      y = Math.max(r + 5, Math.min(H - r - 5, y));
+      x = Math.max(r + 8, Math.min(W - r - 8, x));
+      y = Math.max(r + 8, Math.min(H - r - 8, y));
       placed.push({ x: x, y: y, r: r, entry: e });
     });
 
+    // Draw bubbles
     placed.forEach(function (b) {
       var color = SUB_COLORS[b.entry.key] || '#ccc';
+      // Glow
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r + 4, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.12;
+      ctx.fill();
+      ctx.globalAlpha = 1;
       // Circle
       ctx.beginPath();
       ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
       ctx.fillStyle = color;
-      ctx.globalAlpha = 0.6;
+      ctx.globalAlpha = 0.55;
       ctx.fill();
       ctx.globalAlpha = 1;
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
       ctx.stroke();
-
       // Label
-      ctx.fillStyle = '#2D1B69';
-      ctx.font = (b.r > 25 ? '12' : '9') + 'px Secular One, sans-serif';
+      ctx.fillStyle = COLORS.deepPurple;
+      ctx.font = 'bold ' + (b.r > 30 ? '13' : '10') + 'px Secular One, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(SUB_LABELS[b.entry.key] || b.entry.key, b.x, b.y - 2);
-      ctx.font = 'bold 14px Secular One, sans-serif';
+      ctx.fillText(SUB_LABELS[b.entry.key] || b.entry.key, b.x, b.y - 3);
+      ctx.font = 'bold ' + (b.r > 30 ? '16' : '12') + 'px Secular One, sans-serif';
+      ctx.fillStyle = COLORS.purple;
       ctx.fillText(b.entry.count, b.x, b.y + 14);
     });
   }
 
-  function buildLegend(containerId, items) {
-    var el = document.getElementById(containerId);
-    if (!el) return;
-    el.innerHTML = '';
-    items.forEach(function (item) {
-      var span = document.createElement('span');
-      span.className = 'vocab-legend-item';
-      span.innerHTML = '<span class="vocab-legend-dot" style="background:' + item.color + '"></span>' + item.label;
-      el.appendChild(span);
-    });
-  }
-
-  function updateStats(containerId, maxAge) {
-    var el = document.getElementById(containerId);
-    if (!el) return;
-    var words = getWordsUpTo(maxAge);
-    var cats = getCategories(words);
-    var parts = [];
-    Object.keys(cats).forEach(function (c) {
-      if (cats[c].length > 0 && c !== 'unclear') {
-        var examples = cats[c].slice(-3).map(function (w) { return w.word; }).join(', ');
-        parts.push((CAT_LABELS[c] || c) + ': ' + cats[c].length + ' (' + examples + ')');
-      }
-    });
-    el.textContent = words.length + ' מילים עד גיל ' + maxAge + ' חודשים';
+  // ==========================================
+  // MAIN TRENDS CHART ENHANCEMENT
+  // ==========================================
+  function enhanceMainTrendsChart() {
+    // Add title above the existing trends chart
+    var chartContainer = document.getElementById('trendsChart');
+    if (!chartContainer) return;
+    var existing = chartContainer.querySelector('.trends-chart-title');
+    if (!existing) {
+      var title = document.createElement('h3');
+      title.className = 'trends-chart-title vocab-card-title';
+      title.textContent = 'גידול בסך אוצר המילים על פני זמן';
+      title.style.marginBottom = '0.5rem';
+      chartContainer.insertBefore(title, chartContainer.firstChild);
+    }
   }
 
   // ==========================================
@@ -376,80 +470,48 @@
     fetch('vocabulary.json')
       .then(function (r) { return r.json(); })
       .then(function (data) {
-        vocabData = data;
+        // Filter out future ages
+        vocabData = data.filter(function (w) { return w.age_in_months <= BABY_MAX_AGE; });
         buildCards();
+        enhanceMainTrendsChart();
       })
       .catch(function (err) {
-        console.error('Failed to load vocabulary.json:', err);
+        console.warn('vocabulary.json not loaded:', err);
       });
   }
 
   function buildCards() {
     var container = document.getElementById('vocabCards');
     if (!container || !vocabData.length) return;
+    container.innerHTML = '';
 
     var range = getAgeRange();
-    var catLegend = Object.keys(CAT_COLORS).filter(function (k) { return k !== 'unclear'; }).map(function (k) {
+    var catLegend = CAT_ORDER.map(function (k) {
       return { color: CAT_COLORS[k], label: CAT_LABELS[k] };
     });
-
-    // Card 1: Relative stacked area
-    var c1 = createCard('אבולוציית הקטגוריות (יחסי)', 'chart1');
-    container.appendChild(c1);
-    setupSlider('chart1', range, function (age) {
-      drawStackedArea('chart1', age, true);
-      updateStats('chart1Stats', age);
-    });
-    buildLegend('chart1Legend', catLegend);
-
-    // Card 2: Absolute stacked area
-    var c2 = createCard('צמיחת הקטגוריות (מוחלט)', 'chart2');
-    container.appendChild(c2);
-    setupSlider('chart2', range, function (age) {
-      drawStackedArea('chart2', age, false);
-      updateStats('chart2Stats', age);
-    });
-    buildLegend('chart2Legend', catLegend);
-
-    // Card 3: Growth line
-    var c3 = createCard('עקומת צמיחה ונקודת פיתול', 'chart3');
-    container.appendChild(c3);
-    setupSlider('chart3', range, function (age) {
-      drawGrowthLine('chart3', age);
-      updateStats('chart3Stats', age);
-    });
-
-    // Card 4: Bubble map
-    var c4 = createCard('מפת תשומת הלב', 'chart4');
-    container.appendChild(c4);
-    setupSlider('chart4', range, function (age) {
-      drawBubbles('chart4', age);
-      updateStats('chart4Stats', age);
-    });
-    var subLegend = Object.keys(SUB_COLORS).filter(function (k) { return k !== 'unclear'; }).map(function (k) {
+    var subLegend = Object.keys(SUB_COLORS).filter(function (k) {
+      return k !== 'unclear';
+    }).map(function (k) {
       return { color: SUB_COLORS[k], label: SUB_LABELS[k] };
     });
-    buildLegend('chart4Legend', subLegend);
-  }
 
-  function setupSlider(chartId, range, onUpdate) {
-    var slider = document.getElementById(chartId + 'Slider');
-    var label = document.getElementById(chartId + 'Label');
-    if (!slider) return;
+    // Card 1: Stacked bars
+    var c1 = createCard('אבולוציית הקטגוריות', 'vchart1');
+    container.appendChild(c1);
+    setupSlider('vchart1', range, function (age) { drawStackedBars('vchart1', age); });
+    buildLegend('vchart1', catLegend);
 
-    slider.min = range.min;
-    slider.max = range.max;
-    slider.step = 0.5;
-    slider.value = range.max;
+    // Card 2: Absolute stacked area
+    var c2 = createCard('צמיחת הקטגוריות (מוחלט)', 'vchart2');
+    container.appendChild(c2);
+    setupSlider('vchart2', range, function (age) { drawAbsoluteArea('vchart2', age); });
+    buildLegend('vchart2', catLegend);
 
-    function update() {
-      var age = parseFloat(slider.value);
-      label.textContent = age + ' חודשים';
-      onUpdate(age);
-    }
-
-    slider.addEventListener('input', update);
-    update(); // initial draw
+    // Card 3: Bubble map
+    var c3 = createCard('מפת תשומת הלב', 'vchart3');
+    container.appendChild(c3);
+    setupSlider('vchart3', range, function (age) { drawBubbleMap('vchart3', age); });
+    buildLegend('vchart3', subLegend);
   }
 
   if (document.readyState === 'loading') {
