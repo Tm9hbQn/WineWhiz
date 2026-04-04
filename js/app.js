@@ -530,7 +530,7 @@ function renderWords() {
   words.forEach((w, i) => {
     const card = document.createElement('div');
     card.className = 'word-card reveal-on-scroll';
-    card.style.setProperty('--reveal-delay', `${i * 0.06}s`);
+    card.style.setProperty('--reveal-delay', `${Math.min(i * 0.06, 0.5)}s`);
     card.addEventListener('click', () => openEditModal(w));
 
     const wordEl = document.createElement('div');
@@ -589,13 +589,20 @@ const revealObserver = new IntersectionObserver(
       }
     });
   },
-  { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
+  { threshold: 0.05, rootMargin: '50px 0px 50px 0px' }
 );
 
 function observeRevealElements() {
-  document.querySelectorAll('.reveal-on-scroll:not(.revealed)').forEach((el) => {
+  const els = document.querySelectorAll('.reveal-on-scroll:not(.revealed)');
+  els.forEach((el) => {
     revealObserver.observe(el);
   });
+  // Safety: reveal any items the observer missed after 2s
+  setTimeout(() => {
+    document.querySelectorAll('.reveal-on-scroll:not(.revealed)').forEach((el) => {
+      el.classList.add('revealed');
+    });
+  }, 2000);
 }
 
 /* ===== Edit Modal ===== */
@@ -688,7 +695,7 @@ function renderTimeline() {
   sorted.forEach((w, i) => {
     const item = document.createElement('div');
     item.className = 'timeline-item reveal-on-scroll';
-    item.style.setProperty('--reveal-delay', `${i * 0.08}s`);
+    item.style.setProperty('--reveal-delay', `${Math.min(i * 0.08, 0.5)}s`);
     item.dataset.ageMonths = w.age_months ?? 0;
 
     const dot = document.createElement('div');
