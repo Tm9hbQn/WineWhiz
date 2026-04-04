@@ -12,15 +12,25 @@ let useLocalStorage = false;
 function initSupabase() {
   try {
     if (!window.supabase) {
-      console.warn('Supabase SDK not loaded, using localStorage');
+      console.warn('Supabase SDK not loaded yet, using localStorage');
       useLocalStorage = true;
       return;
     }
     supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    useLocalStorage = false;
     console.log('Supabase connected');
   } catch (e) {
     console.error('Supabase init failed:', e);
     useLocalStorage = true;
+  }
+}
+
+// Called when Supabase SDK finishes loading asynchronously
+function initSupabaseAndReload() {
+  if (supabase) return; // already initialized
+  initSupabase();
+  if (!useLocalStorage) {
+    loadWords(); // reload from Supabase
   }
 }
 
