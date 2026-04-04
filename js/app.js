@@ -1326,3 +1326,30 @@ function updateTimelineOverlay() {
   const dateStr = formatTimelineDate(months);
   timelineAgeText.textContent = `${hebrewAge} - ${dateStr}`;
 }
+
+/* ===== Export ===== */
+document.addEventListener('DOMContentLoaded', () => {
+  const exportBtn = document.getElementById('exportBtn');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', () => {
+      if (words.length === 0) {
+        showSuccess('אין מילים לייצוא');
+        return;
+      }
+      const data = JSON.stringify(words, null, 2);
+      navigator.clipboard.writeText(data).then(() => {
+        showSuccess('הועתק! 📋 (' + words.length + ' מילים)');
+      }).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = data;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showSuccess('הועתק! 📋 (' + words.length + ' מילים)');
+      });
+    });
+  }
+});
