@@ -1227,8 +1227,8 @@ body {
 /* ===== Timeline View ===== */
 .timeline-wrapper {
   position: relative;
-  height: calc(100vh - 200px);
-  min-height: 400px;
+  max-height: 70vh;
+  min-height: 300px;
   display: flex;
   flex-direction: column;
 }
@@ -1267,7 +1267,7 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  overscroll-behavior: auto;
   scroll-behavior: auto;
   padding: 3rem 0 2rem;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 3rem, black calc(100% - 2rem), transparent 100%);
@@ -1490,6 +1490,23 @@ body {
 
   .marker-area {
     padding: 1.2rem 1.2rem 0.8rem;
+  }
+
+  .search-section {
+    padding: 0 1rem 0.3rem;
+  }
+
+  .words-section {
+    margin-top: 0.3rem;
+    padding-top: 1rem;
+  }
+
+  .words-title {
+    margin-bottom: 0.1rem;
+  }
+
+  .words-counter {
+    margin-bottom: 0.8rem;
   }
 
   .timeline-item:nth-child(odd) {
