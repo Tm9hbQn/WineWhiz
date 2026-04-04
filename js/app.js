@@ -292,6 +292,13 @@ function setupEventListeners() {
     document.execCommand('insertText', false, text);
   });
 
+  // Evolution chain modal
+  evoModalClose.addEventListener('click', closeEvoModal);
+  evoDoneBtn.addEventListener('click', closeEvoModal);
+  evoModal.addEventListener('click', (e) => {
+    if (e.target === evoModal) closeEvoModal();
+  });
+
   // View toggle
   if (gridViewBtn) gridViewBtn.addEventListener('click', () => switchView('grid'));
   if (timelineViewBtn) timelineViewBtn.addEventListener('click', () => switchView('timeline'));
@@ -720,12 +727,20 @@ function renderWords() {
       card.appendChild(notesEl);
     }
 
-    const linkedWord = w.linked_to ? words.find((o) => o.id === w.linked_to) : null;
-    if (linkedWord) {
-      const linkEl = document.createElement('div');
-      linkEl.className = 'word-card-link';
-      linkEl.textContent = linkedWord.word;
-      card.appendChild(linkEl);
+    // Show link if this word is part of any chain
+    const hasLink = w.linked_to || words.some((o) => o.linked_to === w.id);
+    if (hasLink) {
+      const chain = getEvolutionChain(w.id);
+      if (chain.length > 1) {
+        const linkEl = document.createElement('div');
+        linkEl.className = 'word-card-link';
+        linkEl.textContent = chain.map((c) => c.word).join(' → ');
+        linkEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openEvoModal(w.id);
+        });
+        card.appendChild(linkEl);
+      }
     }
 
     wordsGrid.appendChild(card);
@@ -837,6 +852,10 @@ function updateLinkUI() {
   const linkedWord = editingLinkedTo ? words.find((w) => w.id === editingLinkedTo) : null;
   if (linkedWord) {
     linkBadge.textContent = linkedWord.word;
+    linkBadge.onclick = () => {
+      closeEditModal();
+      openEvoModal(editingWordId);
+    };
     linkCurrent.classList.remove('hidden');
   } else {
     linkCurrent.classList.add('hidden');
@@ -883,6 +902,139 @@ async function handleDelete() {
     showSuccess('נמחק 🗑️');
   } catch (err) {
     console.error('Error deleting word:', err);
+  }
+}
+
+/* ===== Evolution Chain Modal ===== */
+const evoModal = $('#evoModal');
+const evoModalClose = $('#evoModalClose');
+const evoChain = $('#evoChain');
+const evoDoneBtn = $('#evoDoneBtn');
+let evoSourceWordId = null;
+
+function openEvoModal(wordId) {
+  evoSourceWordId = wordId;
+  evoModal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  renderEvoChain();
+}
+
+function closeEvoModal() {
+  evoModal.classList.add('hidden');
+  document.body.style.overflow = '';
+  evoSourceWordId = null;
+}
+
+function renderEvoChain() {
+  evoChain.innerHTML = '';
+  const chain = getEvolutionChain(evoSourceWordId);
+
+  if (chain.length <= 1) {
+    evoChain.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--soft-purple);font-family:Varela Round,sans-serif;">אין עדיין שרשרת התפתחות.<br>קשרו מילים דרך עריכת מילה.</div>';
+    return;
+  }
+
+  chain.forEach((w, i) => {
+    // Connector before item (except first)
+    if (i > 0) {
+      const conn = document.createElement('div');
+      conn.className = 'evo-connector';
+      const line = document.createElement('div');
+      line.className = 'evo-connector-line';
+      const arrow = document.createElement('div');
+      arrow.className = 'evo-connector-arrow';
+      arrow.textContent = '▼';
+      conn.appendChild(line);
+      conn.appendChild(arrow);
+      evoChain.appendChild(conn);
+    }
+
+    const item = document.createElement('div');
+    item.className = 'evo-chain-item' + (w.id === evoSourceWordId ? ' evo-current' : '');
+
+    const num = document.createElement('div');
+    num.className = 'evo-chain-number';
+    num.textContent = i + 1;
+
+    const info = document.createElement('div');
+    info.className = 'evo-chain-info';
+    const wordEl = document.createElement('div');
+    wordEl.className = 'evo-chain-word';
+    wordEl.textContent = w.word;
+    const ageEl = document.createElement('div');
+    ageEl.className = 'evo-chain-age';
+    ageEl.textContent = w.age_months !== null ? ageMonthsToHebrew(w.age_months) : '';
+    info.appendChild(wordEl);
+    info.appendChild(ageEl);
+
+    // Reorder arrows
+    const arrows = document.createElement('div');
+    arrows.className = 'evo-chain-arrows';
+
+    const upBtn = document.createElement('button');
+    upBtn.className = 'evo-arrow-btn';
+    upBtn.textContent = '▲';
+    upBtn.disabled = i === 0;
+    upBtn.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      swapChainOrder(chain, i, i - 1);
+    });
+
+    const downBtn = document.createElement('button');
+    downBtn.className = 'evo-arrow-btn';
+    downBtn.textContent = '▼';
+    downBtn.disabled = i === chain.length - 1;
+    downBtn.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      swapChainOrder(chain, i, i + 1);
+    });
+
+    arrows.appendChild(upBtn);
+    arrows.appendChild(downBtn);
+
+    item.appendChild(num);
+    item.appendChild(info);
+    item.appendChild(arrows);
+
+    // Click to open edit modal for this word
+    info.addEventListener('click', () => {
+      closeEvoModal();
+      const wordObj = words.find((o) => o.id === w.id);
+      if (wordObj) openEditModal(wordObj);
+    });
+
+    evoChain.appendChild(item);
+  });
+}
+
+async function swapChainOrder(chain, fromIdx, toIdx) {
+  if (toIdx < 0 || toIdx >= chain.length) return;
+
+  // Rebuild linked_to pointers for the entire chain in new order
+  const newChain = [...chain];
+  [newChain[fromIdx], newChain[toIdx]] = [newChain[toIdx], newChain[fromIdx]];
+
+  // Update linked_to: each item points to the next one in chain
+  // First item: linked_to = null (it's the root)
+  // Each subsequent item: linked_to = previous item
+  try {
+    for (let i = 0; i < newChain.length; i++) {
+      const linkedTo = i > 0 ? newChain[i - 1].id : null;
+      if (newChain[i].linked_to !== linkedTo) {
+        await updateWord(newChain[i].id, { linked_to: linkedTo });
+        newChain[i].linked_to = linkedTo;
+        // Update in global words array too
+        const globalWord = words.find((w) => w.id === newChain[i].id);
+        if (globalWord) globalWord.linked_to = linkedTo;
+      }
+    }
+    renderEvoChain();
+    renderWords();
+    showSuccess('סדר עודכן! ✨');
+  } catch (err) {
+    console.error('Error reordering chain:', err);
   }
 }
 
@@ -997,13 +1149,20 @@ function renderTimeline() {
       card.appendChild(notesEl);
     }
 
-    // Show link indicator
-    const linkedWord = w.linked_to ? words.find((o) => o.id === w.linked_to) : null;
-    if (linkedWord) {
-      const linkEl = document.createElement('div');
-      linkEl.className = 'timeline-card-link';
-      linkEl.textContent = linkedWord.word;
-      card.appendChild(linkEl);
+    // Show link indicator if part of any chain
+    const hasTlLink = w.linked_to || words.some((o) => o.linked_to === w.id);
+    if (hasTlLink) {
+      const tlChain = getEvolutionChain(w.id);
+      if (tlChain.length > 1) {
+        const linkEl = document.createElement('div');
+        linkEl.className = 'timeline-card-link';
+        linkEl.textContent = tlChain.map((c) => c.word).join(' → ');
+        linkEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openEvoModal(w.id);
+        });
+        card.appendChild(linkEl);
+      }
     }
 
     item.appendChild(dot);
