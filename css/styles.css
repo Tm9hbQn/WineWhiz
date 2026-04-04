@@ -1978,8 +1978,8 @@ body {
   z-index: 50;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.8rem 1rem;
+  gap: 0.4rem;
+  padding: 0.7rem 1rem 0.6rem;
   margin: 0 -1.2rem;
   background: rgba(255, 249, 251, 0.95);
   backdrop-filter: blur(14px);
@@ -1988,6 +1988,7 @@ body {
   box-shadow: 0 2px 12px rgba(109, 92, 231, 0.06);
 }
 
+/* Top row: section tabs + add button */
 .section-nav-row {
   display: flex;
   justify-content: center;
@@ -1995,14 +1996,12 @@ body {
   gap: 0.5rem;
 }
 
-.section-nav .view-toggle {
-  margin-bottom: 0;
-}
-
+/* Section tabs: large, equal width, prominent */
 .section-nav-btn {
   font-family: 'Secular One', sans-serif;
-  font-size: 1rem;
-  padding: 0.55rem 1.4rem;
+  font-size: 1.05rem;
+  min-width: 120px;
+  padding: 0.6rem 1.2rem;
   border: 2px solid transparent;
   border-radius: 50px;
   background: var(--lavender);
@@ -2010,6 +2009,7 @@ body {
   cursor: pointer;
   transition: all 0.25s ease;
   -webkit-tap-highlight-color: transparent;
+  text-align: center;
 }
 
 .section-nav-btn.active {
@@ -2027,12 +2027,27 @@ body {
   background: transparent;
   color: var(--hot-pink);
   border: 2px solid var(--hot-pink);
-  font-size: 0.85rem;
-  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+  min-width: auto;
+  padding: 0.45rem 0.9rem;
 }
 
 .section-nav-add:hover {
   background: var(--pink);
+}
+
+/* Bottom row: view toggle - smaller, subtler, visually secondary */
+.section-nav .view-toggle {
+  margin-bottom: 0;
+  gap: 0.4rem;
+  padding-top: 0.2rem;
+  border-top: 1px solid rgba(109, 92, 231, 0.06);
+}
+
+.section-nav .view-toggle-btn {
+  font-size: 0.78rem;
+  padding: 0.3rem 0.9rem;
+  background: rgba(243, 229, 245, 0.5);
 }
 
 /* ===== Timeline Load More ===== */
