@@ -2232,6 +2232,76 @@ body {
   flex-shrink: 0;
 }
 
+/* Card description under title */
+.vocab-card-desc {
+  font-family: 'Varela Round', sans-serif;
+  font-size: 0.8rem;
+  color: rgba(45, 27, 105, 0.55);
+  text-align: center;
+  margin: 0 0 0.6rem;
+  line-height: 1.5;
+}
+
+/* Clickable legend items */
+.vocab-legend-clickable {
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.vocab-legend-clickable:hover {
+  background: var(--lavender);
+  transform: scale(1.05);
+}
+
+.vocab-legend-clickable:active {
+  transform: scale(0.97);
+}
+
+/* Trends info panel (persistent) */
+.trends-info-panel {
+  background: white;
+  border-radius: 16px;
+  padding: 1rem 1.2rem;
+  margin-top: 0.8rem;
+  box-shadow: var(--card-shadow);
+  border: 1.5px solid rgba(108, 92, 231, 0.08);
+  transition: all 0.3s ease;
+}
+
+.trends-info-age {
+  font-family: 'Secular One', sans-serif;
+  font-size: 1rem;
+  color: var(--soft-purple);
+  text-align: center;
+  margin-bottom: 0.2rem;
+}
+
+.trends-info-total {
+  font-family: 'Secular One', sans-serif;
+  font-size: 1.3rem;
+  color: var(--deep-purple);
+  text-align: center;
+  margin-bottom: 0.6rem;
+}
+
+.trends-info-cats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem 0.8rem;
+}
+
+.trends-info-cat {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: 'Varela Round', sans-serif;
+  font-size: 0.8rem;
+  color: var(--deep-purple);
+}
+
 /* ===== Utility Classes ===== */
 .hidden {
   display: none !important;

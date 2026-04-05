@@ -102,15 +102,26 @@ Words can be linked to show language evolution (e.g., "בא" → "פא פא" →
 - Stat card has a Lucide `trending-up` icon
 - Main growth chart has title "גידול בסך אוצר המילים על פני זמן"
 
+### Main Trends Chart
+- Shows cumulative vocabulary growth over time (SVG)
+- Has a slider to select age and a persistent info panel showing word count and category breakdown at that age
+- Description text under title explains slider interaction
+
 ### Vocabulary Analysis Cards (below stat card)
 - Data source: `vocabulary.json` (static file, CDI-categorized)
 - Baby max age capped at 16 months (BABY_MAX_AGE in vocab-charts.js)
 - **Card 1: "אבולוציית הקטגוריות"** - Stacked bars per month, touch for tooltip with category breakdown and example words
-- **Card 2: "צמיחת הקטגוריות (מוחלט)"** - Stacked area chart showing absolute growth
-- **Card 3: "מפת תשומת הלב"** - Bubble chart of sub-categories (people, animals, food, etc.)
+- **Card 2: "חלוקת אוצר המילים"** - Single animated proportional column showing category distribution with labels that update as slider changes
+- **Card 3: "מפת הקטגוריות"** - Bubble chart of CDI categories (not sub-categories)
 - All cards have independent time sliders
+- All cards have descriptions under titles explaining interaction
+- Legend items are clickable - clicking shows a description/explanation of the CDI category
 - CDI categories: specific_nominals, general_nominals, action_words, descriptive_words, social_routines
+- Category descriptions defined in `CAT_DESCRIPTIONS` object in vocab-charts.js
 - When adding new words to DB, also update vocabulary.json with proper categorization
+
+### Analytics
+- Microsoft Clarity tag (ID: w6nmr713s0) is loaded in the `<head>` of index.html
 
 ## Pixel Art Baby Character (WIP)
 A pixel art baby girl character is being developed for the site:
