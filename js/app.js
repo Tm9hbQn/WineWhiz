@@ -357,6 +357,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Render vocabulary charts from DB data
   if (window.VocabCharts) VocabCharts.render(words);
 
+  // PWA: service worker, install prompt, realtime, push
+  initPWA();
+
   // Debug: show connection status in console
   console.log('[WordByDandan] supabase client:', db ? 'connected' : 'MISSING');
   console.log('[WordByDandan] words loaded:', words.length);
@@ -3443,3 +3446,268 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+/* ===== PWA: Service Worker, Install Prompt, Realtime, Push ===== */
+
+let deferredInstallPrompt = null;
+let realtimeChannel = null;
+
+function initPWA() {
+  registerServiceWorker();
+  setupInstallPrompt();
+  initRealtime();
+  initPushNotifications();
+}
+
+/* --- Service Worker Registration --- */
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+
+  navigator.serviceWorker
+    .register('./sw.js')
+    .then((reg) => {
+      console.log('[PWA] Service worker registered, scope:', reg.scope);
+
+      // Listen for updates
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            // New version available - activate immediately
+            newWorker.postMessage('SKIP_WAITING');
+            showRealtimeToast('גרסה חדשה זמינה! רענון...', () => {
+              window.location.reload();
+            });
+          }
+        });
+      });
+    })
+    .catch((err) => {
+      console.warn('[PWA] SW registration failed:', err);
+    });
+
+  // Handle messages from service worker
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data?.type === 'WORD_ADDED_NOTIFICATION') {
+      loadWords();
+    }
+  });
+}
+
+/* --- Install Prompt --- */
+function setupInstallPrompt() {
+  const banner = document.getElementById('pwaInstallBanner');
+  const installBtn = document.getElementById('pwaInstallBtn');
+  const dismissBtn = document.getElementById('pwaInstallDismiss');
+
+  if (!banner || !installBtn || !dismissBtn) return;
+
+  // Check if already dismissed recently (24h)
+  const dismissed = localStorage.getItem('pwa_install_dismissed');
+  if (dismissed && Date.now() - parseInt(dismissed) < 24 * 60 * 60 * 1000) return;
+
+  // Check if already installed (standalone mode)
+  if (window.matchMedia('(display-mode: standalone)').matches) return;
+  if (window.navigator.standalone) return;
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    // Show install banner after a short delay
+    setTimeout(() => {
+      banner.classList.remove('hidden');
+    }, 3000);
+  });
+
+  installBtn.addEventListener('click', async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    console.log('[PWA] Install outcome:', outcome);
+    deferredInstallPrompt = null;
+    banner.classList.add('hidden');
+  });
+
+  dismissBtn.addEventListener('click', () => {
+    banner.classList.add('hidden');
+    localStorage.setItem('pwa_install_dismissed', String(Date.now()));
+  });
+
+  // Handle successful install
+  window.addEventListener('appinstalled', () => {
+    banner.classList.add('hidden');
+    deferredInstallPrompt = null;
+    showSuccess('האפליקציה הותקנה! 📲');
+  });
+}
+
+/* --- Supabase Realtime --- */
+function initRealtime() {
+  if (!db) return;
+
+  realtimeChannel = db
+    .channel('words-realtime')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'words' },
+      (payload) => {
+        console.log('[Realtime] Change:', payload.eventType);
+
+        if (payload.eventType === 'INSERT') {
+          const newWord = payload.new;
+          // Check if this word was added by this device (avoid double notification)
+          const recentlyAdded = words.some(
+            (w) => w.word === newWord.word && w.id === newWord.id
+          );
+          if (!recentlyAdded) {
+            showRealtimeToast(`מילה חדשה נוספה: "${newWord.word}" 🌟`);
+          }
+        }
+
+        // Reload words to sync
+        loadWords();
+      }
+    )
+    .subscribe((status) => {
+      console.log('[Realtime] Subscription status:', status);
+    });
+}
+
+/* --- Push Notifications --- */
+async function initPushNotifications() {
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+
+  // Only ask for permission after user installs or interacts
+  if (Notification.permission === 'default') {
+    // Wait for install or first word add - we'll request permission then
+    // This avoids the annoying immediate permission popup
+    return;
+  }
+
+  if (Notification.permission === 'granted') {
+    await subscribeToPush();
+  }
+}
+
+async function requestNotificationPermission() {
+  if (!('Notification' in window)) return false;
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') return false;
+
+  const permission = await Notification.requestPermission();
+  if (permission === 'granted') {
+    await subscribeToPush();
+    return true;
+  }
+  return false;
+}
+
+async function subscribeToPush() {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+
+    // Check if already subscribed
+    const existing = await reg.pushManager.getSubscription();
+    if (existing) {
+      console.log('[Push] Already subscribed');
+      await savePushSubscription(existing);
+      return;
+    }
+
+    // VAPID public key - generate your own pair and replace this
+    // Use: npx web-push generate-vapid-keys
+    const vapidPublicKey = localStorage.getItem('vapid_public_key');
+    if (!vapidPublicKey) {
+      console.log('[Push] No VAPID key configured. Push notifications disabled.');
+      return;
+    }
+
+    const subscription = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+    });
+
+    await savePushSubscription(subscription);
+    console.log('[Push] Subscribed successfully');
+  } catch (err) {
+    console.warn('[Push] Subscription failed:', err);
+  }
+}
+
+async function savePushSubscription(subscription) {
+  if (!db) return;
+  try {
+    const subJson = subscription.toJSON();
+    const deviceId = localStorage.getItem('device_id') || crypto.randomUUID();
+    localStorage.setItem('device_id', deviceId);
+
+    await db.from('push_subscriptions').upsert(
+      {
+        device_id: deviceId,
+        endpoint: subJson.endpoint,
+        keys_p256dh: subJson.keys?.p256dh || '',
+        keys_auth: subJson.keys?.auth || '',
+        created_at: new Date().toISOString(),
+      },
+      { onConflict: 'device_id' }
+    );
+  } catch (err) {
+    console.warn('[Push] Failed to save subscription:', err);
+  }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; i++) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+/* --- Realtime Toast UI --- */
+function showRealtimeToast(text, onClick) {
+  const toast = document.getElementById('realtimeToast');
+  const toastText = document.getElementById('realtimeToastText');
+  const closeBtn = document.getElementById('realtimeToastClose');
+  if (!toast || !toastText) return;
+
+  toastText.textContent = text;
+  toast.classList.remove('hidden');
+
+  if (onClick) {
+    toast.style.cursor = 'pointer';
+    toast.onclick = (e) => {
+      if (e.target !== closeBtn) {
+        onClick();
+        toast.classList.add('hidden');
+      }
+    };
+  }
+
+  clearTimeout(showRealtimeToast._timer);
+  showRealtimeToast._timer = setTimeout(() => {
+    toast.classList.add('hidden');
+    toast.onclick = null;
+  }, 5000);
+
+  closeBtn.onclick = () => {
+    toast.classList.add('hidden');
+    toast.onclick = null;
+    clearTimeout(showRealtimeToast._timer);
+  };
+}
+
+/* --- Request notification permission after first word add --- */
+const _originalSaveNewWord = saveNewWord;
+saveNewWord = async function(notes) {
+  await _originalSaveNewWord(notes);
+  // After first word save, request notification permission
+  if (Notification.permission === 'default') {
+    // Small delay so it doesn't feel jarring
+    setTimeout(() => requestNotificationPermission(), 2000);
+  }
+};

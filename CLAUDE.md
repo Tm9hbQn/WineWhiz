@@ -18,7 +18,9 @@
 ## Tech Stack
 
 - **Frontend:** Vanilla HTML + CSS + JS — no build step, no framework
+- **PWA:** Progressive Web App — installable, offline support, push notifications
 - **Database:** Supabase (PostgreSQL) with automatic localStorage fallback
+- **Realtime:** Supabase Realtime for cross-device sync
 - **Fonts:** Google Fonts — Secular One (headings), Varela Round (body), Karantina (word display), Suez One (minimal use)
 - **Icons:** Lucide Icons v0.344.0 (CDN)
 - **Hosting:** GitHub Pages
@@ -27,21 +29,32 @@
 
 ```
 /
-├── index.html              # Single-page app (~409 lines)
+├── index.html              # Single-page app (~430 lines)
+├── quick-add.html          # PWA shortcut — minimal word add page
 ├── docs.html               # Documentation viewer — renders CLAUDE.md, IMPROVEMENTS.md, changelog (~307 lines)
 ├── tests.html              # Pixel art character studio (369 lines, NOT linked from main)
+├── manifest.webmanifest    # PWA manifest — app name, icons, shortcuts, display mode
+├── sw.js                   # Service Worker — caching, offline, push notifications
 ├── CLAUDE.md               # THIS FILE — read before every task
 ├── IMPROVEMENTS.md         # 20/80 optimization roadmap
 ├── css/
-│   ├── styles.css          # All main styles (~3087 lines)
+│   ├── styles.css          # All main styles (~3280 lines)
 │   └── pixel-baby.css      # Pixel baby styles (NOT loaded in main site)
 ├── js/
-│   ├── app.js              # Main app logic (~3224 lines)
+│   ├── app.js              # Main app logic + PWA module (~3620 lines)
 │   ├── acquisition-analysis.js # Acquisition analysis engine, module pattern (~525 lines)
 │   ├── vocab-charts.js     # Vocabulary analysis charts, IIFE pattern (~726 lines)
 │   └── pixel-baby.js       # Pixel baby character (NOT loaded in main site)
+├── icons/
+│   ├── icon-192x192.png    # PWA icon 192x192
+│   ├── icon-512x512.png    # PWA icon 512x512
+│   └── generate-icons.js   # Script to regenerate icons
 └── supabase/
-    └── schema.sql          # DB schema with RLS policies
+    ├── schema.sql          # DB schema with RLS policies
+    ├── push-schema.sql     # Push notification subscriptions table + Realtime enable
+    └── functions/
+        └── notify-new-word/
+            └── index.ts    # Edge Function for push notifications
 ```
 
 ## Loading Order & Dependencies
@@ -50,16 +63,18 @@ Understanding this prevents 90% of "it doesn't work" issues:
 
 ```
 1. Google Fonts (preconnect + stylesheet)
-2. css/styles.css?v=19          ← all visual styles
-3. HTML body renders
-4. Supabase JS SDK (CDN)        ← must load before app.js
-5. Lucide Icons (CDN)           ← must load before app.js calls lucide.createIcons()
-6. js/app.js?v=21               ← main logic, runs on DOMContentLoaded
-6b. js/acquisition-analysis.js?v=3 ← acquisition analysis engine (module)
-7. js/vocab-charts.js?v=13      ← chart IIFE, exposes VocabCharts.render(), called by app.js
+2. css/styles.css?v=20          ← all visual styles
+3. PWA manifest + meta tags     ← manifest.webmanifest, theme-color, apple-mobile-web-app
+4. HTML body renders
+5. Supabase JS SDK (CDN)        ← must load before app.js
+6. Lucide Icons (CDN)           ← must load before app.js calls lucide.createIcons()
+7. js/app.js?v=22               ← main logic + PWA module, runs on DOMContentLoaded
+7b. js/acquisition-analysis.js?v=3 ← acquisition analysis engine (module)
+8. js/vocab-charts.js?v=14      ← chart IIFE, exposes VocabCharts.render(), called by app.js
+9. Service Worker (sw.js)       ← registered by app.js initPWA(), runs in background thread
 ```
 
-**Critical:** `app.js` depends on `window.supabase` (SDK) and `lucide` (icons) being available. `vocab-charts.js` exposes `window.VocabCharts.render(words)` and is called by `app.js` after loading words from DB.
+**Critical:** `app.js` depends on `window.supabase` (SDK) and `lucide` (icons) being available. `vocab-charts.js` exposes `window.VocabCharts.render(words)` and is called by `app.js` after loading words from DB. The service worker is registered asynchronously and doesn't block loading.
 
 ## Architecture Overview
 
@@ -155,7 +170,9 @@ All DB operations follow this pattern:
 | 9 | Edit Modal | `#editModal` | View/Edit/Add-evo toggle, z-index 200 |
 | 10 | Evo Modal | `#evoModal` | Vertical chain with reorder, z-index 200 |
 | 11 | Delete Modal | `#deleteConfirmModal` | Custom styled, NEVER use native confirm() |
-| 12 | Footer | `.main-footer` | Copyright, export btn, tests.html link, docs.html link |
+| 12 | Install Banner | `#pwaInstallBanner` | PWA install prompt, fixed bottom, z-index 150 |
+| 13 | Realtime Toast | `#realtimeToast` | Real-time new word notification, fixed top center, z-index 250 |
+| 14 | Footer | `.main-footer` | Copyright, export btn, tests.html link, docs.html link |
 
 ## Design System
 
@@ -356,6 +373,66 @@ All charts/stats read from the global `words` array (fetched from Supabase). No 
 - Total words: 114 (106 unique + 8 evolution variants)
 - Categories: general_nominals(68), personal_social(14), specific_nominals(10), modifiers(6), action_words(5), unclear(3)
 
+## PWA (Progressive Web App)
+
+### Overview
+The app is a fully installable PWA. Users visit the site on Android/iOS and get prompted to "Install" it to their home screen. Once installed, it runs in standalone mode (no browser chrome).
+
+### Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Manifest | `manifest.webmanifest` | App name, icons, shortcuts, display mode |
+| Service Worker | `sw.js` | Caching, offline, push notification handling |
+| Quick Add | `quick-add.html` | Minimal page for "Add word" shortcut |
+| Icons | `icons/icon-{192,512}x{192,512}.png` | App icons |
+| PWA Module | `app.js` (bottom) | SW registration, install prompt, realtime, push |
+| Push Schema | `supabase/push-schema.sql` | Push subscription storage |
+| Edge Function | `supabase/functions/notify-new-word/` | Server-side push delivery |
+
+### Features
+1. **Installable** — `beforeinstallprompt` event shows install banner after 3s delay
+2. **Offline** — Service worker caches static assets (stale-while-revalidate strategy)
+3. **Real-time sync** — Supabase Realtime subscription on `words` table; shows toast when another device adds a word
+4. **Push notifications** — Web Push API; permission requested after user's first word add (not on page load)
+5. **Quick add shortcut** — Manifest shortcut opens `quick-add.html` directly
+6. **Auto-update** — SW detects new version, shows "refresh" toast
+
+### Service Worker Cache Strategy
+- **Local assets**: Stale-while-revalidate (serve cached, update in background)
+- **Supabase API**: Network only (always fresh data)
+- **Supabase SDK**: Network first, cache fallback
+- **Google Fonts**: Cache first (rarely change)
+- **Offline navigation**: Falls back to cached `index.html`
+
+### Install Banner UX
+1. `beforeinstallprompt` fires → stored in `deferredInstallPrompt`
+2. After 3s delay, `.pwa-install-banner` shown (fixed bottom)
+3. "התקינו" button → calls `deferredInstallPrompt.prompt()`
+4. Dismiss button → hides for 24h (stored in `localStorage.pwa_install_dismissed`)
+5. If already in standalone mode → banner never shown
+
+### Push Notification Setup (requires manual steps)
+1. Run `npx web-push generate-vapid-keys` to get VAPID key pair
+2. Store public key in `localStorage.vapid_public_key` on each device (or hardcode in app.js)
+3. Run `supabase/push-schema.sql` in Supabase SQL Editor
+4. Deploy Edge Function: `supabase functions deploy notify-new-word`
+5. Create Database Webhook in Supabase Dashboard: table=words, event=INSERT, function=notify-new-word
+6. Set secrets: `supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:...`
+
+### Realtime (works out of the box)
+- Requires running: `ALTER PUBLICATION supabase_realtime ADD TABLE words;` in SQL Editor
+- Once enabled, all open app instances receive live word updates
+- Toast notification shown when another device adds a word
+
+### Key Globals (PWA section of app.js)
+| Variable | Purpose |
+|----------|---------|
+| `deferredInstallPrompt` | Stored install prompt event |
+| `realtimeChannel` | Supabase Realtime channel |
+
+---
+
 ## Pixel Baby Character (WIP — test page only)
 
 - **Status:** Removed from main site. Development on `tests.html` only.
@@ -382,7 +459,7 @@ All charts/stats read from the global `words` array (fetched from Supabase). No 
 grep 'app.js?v=' index.html && grep 'styles.css?v=' index.html && grep 'vocab-charts.js?v=' index.html
 ```
 
-Increment `?v=N` for every file you changed. Current versions: styles.css?v=19, app.js?v=21, acquisition-analysis.js?v=3, vocab-charts.js?v=14.
+Increment `?v=N` for every file you changed. Current versions: styles.css?v=20, app.js?v=22, acquisition-analysis.js?v=3, vocab-charts.js?v=14.
 
 ### 2. RTL Arrows
 

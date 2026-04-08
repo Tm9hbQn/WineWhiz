@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>הוסיפו מילה — דנדן</title>
+  <meta name="theme-color" content="#6C5CE7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👶</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Varela+Round&family=Karantina:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --pink: #FFE5EC; --hot-pink: #FF6B9D; --deep-purple: #2D1B69;
+      --soft-purple: #6C5CE7; --bg: #FFF9FB; --teal: #4ECDC4;
+    }
+    body {
+      font-family: 'Varela Round', sans-serif;
+      background: var(--bg);
+      color: var(--deep-purple);
+      min-height: 100vh; min-height: 100dvh;
+      direction: rtl;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      padding-top: env(safe-area-inset-top, 0);
+    }
+    .qa-card {
+      background: white;
+      border-radius: 24px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 8px 40px rgba(108, 92, 231, 0.15);
+      text-align: center;
+    }
+    .qa-emoji { font-size: 3rem; margin-bottom: 0.5rem; }
+    .qa-title {
+      font-family: 'Karantina', cursive;
+      font-size: 1.8rem;
+      color: var(--soft-purple);
+      margin-bottom: 1.5rem;
+    }
+    .qa-input-wrap {
+      position: relative;
+      margin-bottom: 1rem;
+    }
+    .qa-input {
+      width: 100%;
+      padding: 1rem 1.2rem;
+      font-size: 1.3rem;
+      font-family: 'Karantina', cursive;
+      border: 2px solid var(--pink);
+      border-radius: 16px;
+      background: var(--bg);
+      color: var(--deep-purple);
+      text-align: center;
+      outline: none;
+      transition: border-color 0.3s;
+      direction: rtl;
+    }
+    .qa-input:focus {
+      border-color: var(--soft-purple);
+    }
+    .qa-input::placeholder {
+      color: #ccc;
+    }
+    .qa-btn {
+      width: 100%;
+      padding: 0.9rem;
+      font-size: 1.1rem;
+      font-family: 'Varela Round', sans-serif;
+      background: linear-gradient(135deg, var(--soft-purple), var(--hot-pink));
+      color: white;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      margin-bottom: 0.8rem;
+    }
+    .qa-btn:active { transform: scale(0.97); }
+    .qa-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .qa-link {
+      display: inline-block;
+      color: var(--soft-purple);
+      text-decoration: none;
+      font-size: 0.9rem;
+      opacity: 0.7;
+    }
+    .qa-success {
+      display: none;
+      text-align: center;
+      padding: 1rem;
+    }
+    .qa-success.show { display: block; }
+    .qa-success-emoji { font-size: 3rem; }
+    .qa-success-text {
+      font-size: 1.2rem;
+      margin-top: 0.5rem;
+      color: var(--soft-purple);
+    }
+    .qa-form.hidden { display: none; }
+    /* Age quick select */
+    .qa-age-row {
+      display: none;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+    .qa-age-row.show { display: flex; }
+    .qa-age-btn {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.85rem;
+      font-family: 'Varela Round', sans-serif;
+      border: 1.5px solid var(--pink);
+      border-radius: 20px;
+      background: white;
+      color: var(--deep-purple);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .qa-age-btn.selected {
+      background: var(--soft-purple);
+      color: white;
+      border-color: var(--soft-purple);
+    }
+  </style>
+</head>
+<body>
+  <div class="qa-card">
+    <div class="qa-form" id="qaForm">
+      <div class="qa-emoji">✨</div>
+      <div class="qa-title">מילה חדשה!</div>
+      <div class="qa-input-wrap">
+        <input class="qa-input" id="qaWord" type="text" placeholder="כתבו מילה..." autocomplete="off" autofocus>
+      </div>
+      <div class="qa-age-row" id="qaAgeRow"></div>
+      <button class="qa-btn" id="qaSubmit" disabled>הוסיפו 🌟</button>
+      <a class="qa-link" href="index.html">פתחו את האפליקציה המלאה ←</a>
+    </div>
+    <div class="qa-success" id="qaSuccess">
+      <div class="qa-success-emoji">🎉</div>
+      <div class="qa-success-text" id="qaSuccessText"></div>
+      <button class="qa-btn" id="qaAnother" style="margin-top:1rem">הוסיפו עוד מילה</button>
+      <br>
+      <a class="qa-link" href="index.html">פתחו את האפליקציה ←</a>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script>
+    const SUPABASE_URL = 'https://hxhyaumawnmsbqwediqe.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4aHlhdW1hd25tc2Jxd2VkaXFlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNDI2ODAsImV4cCI6MjA5MDgxODY4MH0.NEXiKaMfI_PS6LxyiYHSzHOqsOBHTuHICLDErVNJckY';
+    const BABY_BIRTHDAY = new Date(2024, 11, 5);
+
+    let db = null;
+    let selectedAge = null;
+
+    function calculateCurrentAgeMonths() {
+      const now = new Date();
+      let months = (now.getFullYear() - BABY_BIRTHDAY.getFullYear()) * 12;
+      months += now.getMonth() - BABY_BIRTHDAY.getMonth();
+      if (now.getDate() < BABY_BIRTHDAY.getDate()) months--;
+      return Math.max(0, months);
+    }
+
+    function ageMonthsToHebrew(m) {
+      if (m === 0) return 'לידה';
+      const names = ['','חודש','חודשיים','3 חודשים','4 חודשים','5 חודשים','6 חודשים',
+        '7 חודשים','8 חודשים','9 חודשים','10 חודשים','11 חודשים'];
+      if (m < 12) return names[m] || m + ' חודשים';
+      const y = Math.floor(m / 12);
+      const rem = m % 12;
+      let t = y === 1 ? 'שנה' : y === 2 ? 'שנתיים' : y + ' שנים';
+      if (rem > 0) t += ' ו' + (names[rem] || rem + ' ח׳');
+      return t;
+    }
+
+    // Build age buttons
+    function buildAgeButtons() {
+      const row = document.getElementById('qaAgeRow');
+      const max = calculateCurrentAgeMonths();
+      // Show last 4 months + "now"
+      const start = Math.max(0, max - 3);
+      for (let m = max; m >= start; m--) {
+        const btn = document.createElement('button');
+        btn.className = 'qa-age-btn';
+        btn.textContent = m === max ? 'עכשיו!' : ageMonthsToHebrew(m);
+        btn.addEventListener('click', () => {
+          row.querySelectorAll('.qa-age-btn').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          selectedAge = m;
+        });
+        row.appendChild(btn);
+        if (m === max) {
+          btn.classList.add('selected');
+          selectedAge = m;
+        }
+      }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.supabase) {
+        db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+      buildAgeButtons();
+
+      const wordInput = document.getElementById('qaWord');
+      const submitBtn = document.getElementById('qaSubmit');
+      const form = document.getElementById('qaForm');
+      const success = document.getElementById('qaSuccess');
+      const ageRow = document.getElementById('qaAgeRow');
+
+      wordInput.addEventListener('input', () => {
+        const hasWord = wordInput.value.trim().length > 0;
+        submitBtn.disabled = !hasWord;
+        if (hasWord) ageRow.classList.add('show');
+        else ageRow.classList.remove('show');
+      });
+
+      wordInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !submitBtn.disabled) {
+          e.preventDefault();
+          submitBtn.click();
+        }
+      });
+
+      submitBtn.addEventListener('click', async () => {
+        const word = wordInput.value.trim();
+        if (!word) return;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'שומר...';
+
+        try {
+          const wordData = { word, age_months: selectedAge };
+          if (db) {
+            const { error } = await db.from('words').insert(wordData);
+            if (error) throw error;
+          } else {
+            // localStorage fallback
+            const lsKey = 'daniella_words';
+            const words = JSON.parse(localStorage.getItem(lsKey) || '[]');
+            words.push({ id: crypto.randomUUID(), ...wordData, created_at: new Date().toISOString() });
+            localStorage.setItem(lsKey, JSON.stringify(words));
+          }
+          document.getElementById('qaSuccessText').textContent = `"${word}" נוספה בהצלחה! 🌟`;
+          form.classList.add('hidden');
+          success.classList.add('show');
+        } catch (err) {
+          console.error('Quick add failed:', err);
+          submitBtn.textContent = 'שגיאה, נסו שוב';
+          submitBtn.disabled = false;
+          setTimeout(() => { submitBtn.textContent = 'הוסיפו 🌟'; }, 2000);
+        }
+      });
+
+      document.getElementById('qaAnother').addEventListener('click', () => {
+        form.classList.remove('hidden');
+        success.classList.remove('show');
+        wordInput.value = '';
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'הוסיפו 🌟';
+        document.getElementById('qaAgeRow').classList.remove('show');
+        wordInput.focus();
+      });
+
+      // Register SW
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      }
+    });
+  </script>
+</body>
+</html>

@@ -3156,3 +3156,164 @@ body::-webkit-scrollbar-thumb {
     min-width: 28px;
   }
 }
+
+/* ===== PWA: Install Banner ===== */
+.pwa-install-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 150;
+  padding: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  background: white;
+  box-shadow: 0 -4px 30px rgba(108, 92, 231, 0.15);
+  transform: translateY(0);
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
+  animation: pwaSlideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.pwa-install-banner.hidden {
+  transform: translateY(110%);
+  pointer-events: none;
+  opacity: 0;
+}
+
+@keyframes pwaSlideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.pwa-install-content {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 1rem 1.2rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.pwa-install-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.pwa-install-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.pwa-install-text strong {
+  display: block;
+  font-family: 'Secular One', sans-serif;
+  font-size: 0.95rem;
+  color: var(--deep-purple);
+  margin-bottom: 0.15rem;
+}
+
+.pwa-install-text span {
+  font-size: 0.8rem;
+  color: var(--soft-purple);
+  opacity: 0.8;
+}
+
+.pwa-install-btn {
+  flex-shrink: 0;
+  padding: 0.6rem 1.3rem;
+  font-family: 'Secular One', sans-serif;
+  font-size: 0.9rem;
+  background: linear-gradient(135deg, var(--soft-purple), var(--hot-pink));
+  color: white;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
+}
+
+.pwa-install-btn:active {
+  transform: scale(0.95);
+}
+
+.pwa-install-dismiss {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: var(--deep-purple);
+  opacity: 0.4;
+  cursor: pointer;
+  padding: 0.3rem;
+}
+
+/* ===== PWA: Realtime Notification Toast ===== */
+.realtime-toast {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 250;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 40px rgba(108, 92, 231, 0.2);
+  padding: 0.8rem 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: 90vw;
+  animation: toastSlideDown 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border: 2px solid var(--lavender);
+}
+
+.realtime-toast.hidden {
+  display: none;
+}
+
+@keyframes toastSlideDown {
+  from { transform: translateX(-50%) translateY(-120%); opacity: 0; }
+  to { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+.realtime-toast-emoji {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.realtime-toast-text {
+  font-family: 'Varela Round', sans-serif;
+  font-size: 0.9rem;
+  color: var(--deep-purple);
+}
+
+.realtime-toast-close {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: var(--deep-purple);
+  opacity: 0.4;
+  cursor: pointer;
+  padding: 0.2rem;
+  flex-shrink: 0;
+}
+
+/* ===== PWA: Standalone Mode Adjustments ===== */
+@media all and (display-mode: standalone) {
+  body {
+    /* Account for status bar / notch */
+    padding-top: env(safe-area-inset-top, 0);
+  }
+
+  .main-header {
+    padding-top: calc(1.5rem + env(safe-area-inset-top, 0));
+  }
+
+  /* Hide "open full app" links in standalone */
+  .qa-link[href="index.html"] {
+    display: none;
+  }
+
+  /* Adjust sticky nav for standalone */
+  .section-nav {
+    top: env(safe-area-inset-top, 0);
+  }
+}

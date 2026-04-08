@@ -1,0 +1,56 @@
+{
+  "name": "המילים הראשונות של דניאלה",
+  "short_name": "מילים של דנדן",
+  "description": "מעקב אחרי המילים הראשונות של דניאלה — אפליקציה משפחתית",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "dir": "rtl",
+  "lang": "he",
+  "theme_color": "#6C5CE7",
+  "background_color": "#FFF9FB",
+  "icons": [
+    {
+      "src": "icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "הוסיפו מילה חדשה",
+      "short_name": "מילה חדשה",
+      "description": "הוספה מהירה של מילה חדשה",
+      "url": "./quick-add.html",
+      "icons": [
+        {
+          "src": "icons/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "categories": ["lifestyle", "education"],
+  "prefer_related_applications": false
+}
