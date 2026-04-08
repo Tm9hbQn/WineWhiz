@@ -242,6 +242,8 @@ let addFlowEvoSource = null; // word object to exclude from duplicate check when
 let filterMonth = null; // selected age_months filter (null = all)
 let filterCategory = null; // selected CDI category filter (null = all)
 let vocabLookup = {}; // word text → vocabulary.json entry (for category lookup)
+let selectedGrowthMonth = null; // selected month in growth chart (for red dot)
+let selectedNounBiasIndex = null; // selected index in noun bias chart (for red dot)
 
 const CDI_CAT_LABELS = {
   general_nominals: 'שמות עצם כלליים',
@@ -2323,6 +2325,28 @@ function renderTrends() {
     circles.push({ dp, cx, cy, circle });
   });
 
+  // Red dot for selected point
+  const redDotGroup = document.createElementNS(ns, 'g');
+  redDotGroup.setAttribute('id', 'growthRedDot');
+  svg.appendChild(redDotGroup);
+
+  function drawRedDot() {
+    const redDot = document.getElementById('growthRedDot');
+    redDot.innerHTML = '';
+    if (selectedGrowthMonth === null) return;
+
+    const selected = circles.find(c => c.dp.month === selectedGrowthMonth);
+    if (!selected) return;
+
+    const dot = document.createElementNS(ns, 'circle');
+    dot.setAttribute('cx', selected.cx);
+    dot.setAttribute('cy', selected.cy);
+    dot.setAttribute('r', '8');
+    dot.setAttribute('fill', '#FF1744');
+    dot.setAttribute('opacity', '0.9');
+    redDot.appendChild(dot);
+  }
+
   // Interactive hit area over entire chart for cursor + tooltip
   const hitRect = document.createElementNS(ns, 'rect');
   hitRect.setAttribute('x', pad.left);
@@ -2386,12 +2410,35 @@ function renderTrends() {
     showCursor(e.clientX - rect.left);
   });
   hitRect.addEventListener('mouseleave', hideCursor);
+  hitRect.addEventListener('click', (e) => {
+    const rect = svg.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const c = findClosest(mx);
+    if (c) {
+      selectedGrowthMonth = c.dp.month;
+      drawRedDot();
+    }
+  });
   hitRect.addEventListener('touchstart', (e) => {
     e.preventDefault();
     const rect = svg.getBoundingClientRect();
     showCursor(e.touches[0].clientX - rect.left);
     setTimeout(hideCursor, 2500);
   }, { passive: false });
+  hitRect.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    const rect = svg.getBoundingClientRect();
+    const touch = e.changedTouches[0];
+    const mx = touch.clientX - rect.left;
+    const c = findClosest(mx);
+    if (c) {
+      selectedGrowthMonth = c.dp.month;
+      drawRedDot();
+    }
+  }, { passive: false });
+
+  // Draw red dot if a month is selected
+  drawRedDot();
 
   // --- Delta Chart (new words per month) ---
   const deltaSvg = document.getElementById('deltaSvg');
@@ -2793,6 +2840,108 @@ function drawAcqNounBias(ordered, AA) {
   ctx.fillStyle = 'rgba(108,92,231,0.4)';
   ctx.fillText('מילה #', PAD.left + cW / 2, H - PAD.bottom + 28);
 
+  // Function to draw red dot for selected point
+  function drawNounBiasRedDot() {
+    if (selectedNounBiasIndex === null || selectedNounBiasIndex >= n) return;
+
+    // Clear canvas and redraw everything
+    ctx.clearRect(0, 0, W, H);
+
+    // Grid lines
+    ctx.strokeStyle = 'rgba(108,92,231,0.08)';
+    ctx.lineWidth = 1;
+    for (let v = 0; v <= 100; v += 25) {
+      ctx.beginPath();
+      ctx.moveTo(PAD.left, yPos(v));
+      ctx.lineTo(W - PAD.right, yPos(v));
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(108,92,231,0.5)';
+      ctx.font = '10px Varela Round, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(v + '%', PAD.left - 6, yPos(v) + 4);
+    }
+
+    // 50% line
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,107,157,0.3)';
+    ctx.setLineDash([6, 4]);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(PAD.left, yPos(50));
+    ctx.lineTo(W - PAD.right, yPos(50));
+    ctx.stroke();
+    ctx.restore();
+
+    // X-axis labels
+    const milestones = AA.getDynamicMilestones(n);
+    ctx.fillStyle = 'rgba(108,92,231,0.6)';
+    ctx.font = '10px Varela Round, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('1', xPos(0), H - PAD.bottom + 16);
+    milestones.forEach(m => {
+      ctx.fillText(m, xPos(m - 1), H - PAD.bottom + 16);
+    });
+
+    // Gradient fill
+    ctx.beginPath();
+    ctx.moveTo(xPos(0), yPos(nounData[0].nounPct));
+    for (let i = 1; i < n; i++) {
+      const cpx = (xPos(i - 1) + xPos(i)) / 2;
+      ctx.bezierCurveTo(cpx, yPos(nounData[i - 1].nounPct), cpx, yPos(nounData[i].nounPct), xPos(i), yPos(nounData[i].nounPct));
+    }
+    ctx.lineTo(xPos(n - 1), yPos(0));
+    ctx.lineTo(xPos(0), yPos(0));
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // The line
+    ctx.beginPath();
+    ctx.moveTo(xPos(0), yPos(nounData[0].nounPct));
+    for (let i = 1; i < n; i++) {
+      const cpx = (xPos(i - 1) + xPos(i)) / 2;
+      ctx.bezierCurveTo(cpx, yPos(nounData[i - 1].nounPct), cpx, yPos(nounData[i].nounPct), xPos(i), yPos(nounData[i].nounPct));
+    }
+    ctx.strokeStyle = '#6C5CE7';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Start and end dots
+    [[0, startPct], [n - 1, endPct]].forEach(([idx, pct]) => {
+      ctx.beginPath();
+      ctx.arc(xPos(idx), yPos(pct), 5, 0, Math.PI * 2);
+      ctx.fillStyle = idx === 0 ? '#FF6B9D' : '#6C5CE7';
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    });
+
+    // Labels
+    ctx.font = 'bold 11px Secular One, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#FF6B9D';
+    ctx.fillText(startPct + '%', xPos(0) + 8, yPos(startPct) - 6);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#6C5CE7';
+    ctx.fillText(endPct + '%', xPos(n - 1) - 8, yPos(endPct) - 6);
+
+    // "מילה #" label
+    ctx.font = '10px Varela Round, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(108,92,231,0.4)';
+    ctx.fillText('מילה #', PAD.left + cW / 2, H - PAD.bottom + 28);
+
+    // Draw red dot at selected point
+    const selectedPt = nounData[selectedNounBiasIndex];
+    ctx.beginPath();
+    ctx.arc(xPos(selectedNounBiasIndex), yPos(selectedPt.nounPct), 8, 0, Math.PI * 2);
+    ctx.fillStyle = '#FF1744';
+    ctx.globalAlpha = 0.9;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
   // Tooltip on click
   const tipEl = document.getElementById('acqNounBiasTip');
   canvas.onclick = function (e) {
@@ -2804,6 +2953,7 @@ function drawAcqNounBias(ordered, AA) {
       const d = Math.abs(mx - xPos(i));
       if (d < minDist) { minDist = d; closest = i; }
     }
+    selectedNounBiasIndex = closest;
     const pt = nounData[closest];
     const w = ordered[closest];
     let html = '<div class="acq-tip-card"><strong>מילה #' + pt.index + ': ' + pt.word + '</strong>';
@@ -2812,7 +2962,11 @@ function drawAcqNounBias(ordered, AA) {
     html += '<br>שאר קטגוריות: <strong>' + (100 - pt.nounPct) + '%</strong>';
     html += '</div>';
     tipEl.innerHTML = html;
+    drawNounBiasRedDot();
   };
+
+  // Draw red dot if a point is selected
+  drawNounBiasRedDot();
 }
 
 /* ===== Chapter 2: Rolling Category Mix ===== */
