@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Secular+One&family=Varela+Round&family=Karantina:wght@300;400;700&family=Suez+One&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=15">
+  <link rel="stylesheet" href="css/styles.css?v=16">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👶</text></svg>">
 </head>
 <body>
@@ -273,11 +273,36 @@
         <div class="acq-legend" id="acqMilestonesLeg"></div>
       </div>
 
-      <!-- Chapter 4: Insights -->
+      <!-- Chapter 4A: Insights -->
       <div class="acq-card reveal-on-scroll" id="acqInsights">
         <h3 class="acq-card-title">תובנות מהנתונים</h3>
         <p class="acq-card-subtitle">המנוע מזהה דפוסים מעניינים ברכישת המילים</p>
         <div class="acq-insights-list" id="acqInsightsList"></div>
+      </div>
+
+      <!-- Chapter 4B: Category Emergence Timeline -->
+      <div class="acq-card reveal-on-scroll" id="acqEmergence">
+        <h3 class="acq-card-title" id="acqEmergenceTitle"></h3>
+        <p class="acq-card-subtitle">מתי הופיעה כל קטגוריה לראשונה ואיך היא התפתחה</p>
+        <div class="acq-chart-wrap"><canvas id="acqEmergenceCanvas"></canvas></div>
+        <div class="acq-tooltip" id="acqEmergenceTip"></div>
+      </div>
+
+      <!-- Chapter 5: Noun Bias Curve -->
+      <div class="acq-card reveal-on-scroll" id="acqNounBias">
+        <h3 class="acq-card-title" id="acqNounBiasTitle"></h3>
+        <p class="acq-card-subtitle">אחוז שמות העצם מתוך כלל המילים המסווגות, לאורך סדר הרכישה</p>
+        <div class="acq-chart-wrap"><canvas id="acqNounBiasCanvas"></canvas></div>
+        <div class="acq-tooltip" id="acqNounBiasTip"></div>
+      </div>
+
+      <!-- Chapter 6: Sub-category Radar -->
+      <div class="acq-card reveal-on-scroll" id="acqRadar">
+        <h3 class="acq-card-title" id="acqRadarTitle"></h3>
+        <p class="acq-card-subtitle">צורת העולם של התינוק - תת-קטגוריות באבני דרך שונות</p>
+        <div class="acq-radar-layers" id="acqRadarLayers"></div>
+        <div class="acq-chart-wrap"><canvas id="acqRadarCanvas"></canvas></div>
+        <div class="acq-tooltip" id="acqRadarTip"></div>
       </div>
     </div>
   </section>
@@ -386,8 +411,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js"></script>
-  <script src="js/app.js?v=16"></script>
-  <script src="js/acquisition-analysis.js?v=1"></script>
+  <script src="js/app.js?v=17"></script>
+  <script src="js/acquisition-analysis.js?v=2"></script>
   <script src="js/vocab-charts.js?v=11"></script>
 </body>
 </html>

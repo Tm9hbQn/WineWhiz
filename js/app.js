@@ -2562,6 +2562,15 @@ function renderAcquisitionCharts() {
   // ---- CHAPTER 4: Insights ----
   renderInsights(ordered, AA);
 
+  // ---- CHAPTER 4B: Category Emergence Timeline ----
+  drawAcqEmergence(ordered, AA);
+
+  // ---- CHAPTER 5: Noun Bias Curve ----
+  drawAcqNounBias(ordered, AA);
+
+  // ---- CHAPTER 6: Sub-category Radar ----
+  drawAcqRadar(ordered, AA);
+
   // Observe for scroll reveal
   requestAnimationFrame(() => observeRevealElements());
 }
@@ -2970,6 +2979,479 @@ function renderInsights(ordered, AA) {
     card.innerHTML = '<div class="acq-insight-text">' + insight.text + '</div>';
     container.appendChild(card);
   });
+}
+
+/* ===== Chapter 4B: Category Emergence Timeline ===== */
+function drawAcqEmergence(ordered, AA) {
+  const canvas = document.getElementById('acqEmergenceCanvas');
+  const titleEl = document.getElementById('acqEmergenceTitle');
+  if (!canvas) return;
+
+  const emergence = AA.getCategoryEmergence(ordered);
+  if (titleEl) titleEl.textContent = AA.getEmergenceTitle(ordered);
+
+  // Only show categories that have words
+  const activeCats = AA.CAT_ORDER.filter(c => emergence[c].count > 0);
+  if (activeCats.length === 0) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.offsetWidth;
+  const rowH = 32;
+  const gap = 14;
+  const H = Math.max(180, activeCats.length * (rowH + gap) + 60);
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const PAD = { top: 24, right: 16, bottom: 32, left: 130 };
+  const trackW = W - PAD.left - PAD.right;
+  const n = ordered.length;
+
+  function xPos(wordIndex) { return PAD.left + ((wordIndex - 1) / Math.max(n - 1, 1)) * trackW; }
+
+  ctx.clearRect(0, 0, W, H);
+
+  // X-axis: word numbers
+  const milestones = AA.getDynamicMilestones(n);
+  ctx.fillStyle = 'rgba(108,92,231,0.4)';
+  ctx.font = '10px Varela Round, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('1', xPos(1), H - 6);
+  milestones.forEach(m => {
+    ctx.fillText(m, xPos(m), H - 6);
+    // Dashed vertical guide
+    ctx.save();
+    ctx.strokeStyle = 'rgba(108,92,231,0.08)';
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(xPos(m), PAD.top - 8);
+    ctx.lineTo(xPos(m), H - PAD.bottom);
+    ctx.stroke();
+    ctx.restore();
+  });
+
+  activeCats.forEach((c, ci) => {
+    const e = emergence[c];
+    const y = PAD.top + ci * (rowH + gap);
+    const midY = y + rowH / 2;
+
+    // Category label
+    ctx.fillStyle = AA.CAT_COLORS[c];
+    ctx.font = 'bold 12px Secular One, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(AA.CAT_LABELS[c], PAD.left - 12, midY);
+
+    // Track background (dotted before first word)
+    if (e.firstIndex > 1) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(108,92,231,0.1)';
+      ctx.setLineDash([2, 4]);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(xPos(1), midY);
+      ctx.lineTo(xPos(e.firstIndex), midY);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Active track (solid from first word to last word in category)
+    const lastIndex = e.words.length > 0 ? e.words[e.words.length - 1].index : e.firstIndex;
+    ctx.strokeStyle = AA.CAT_COLORS[c];
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(xPos(e.firstIndex), midY);
+    ctx.lineTo(xPos(lastIndex), midY);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // Dots for each word in category
+    e.words.forEach(w => {
+      ctx.beginPath();
+      ctx.arc(xPos(w.index), midY, 4, 0, Math.PI * 2);
+      ctx.fillStyle = AA.CAT_COLORS[c];
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
+
+    // First word marker (bigger)
+    ctx.beginPath();
+    ctx.arc(xPos(e.firstIndex), midY, 6, 0, Math.PI * 2);
+    ctx.fillStyle = AA.CAT_COLORS[c];
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 5-word mark
+    if (e.fiveWordMark > 0) {
+      ctx.save();
+      ctx.strokeStyle = AA.CAT_COLORS[c];
+      ctx.globalAlpha = 0.4;
+      ctx.setLineDash([2, 2]);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(xPos(e.fiveWordMark), midY - rowH / 2 + 2);
+      ctx.lineTo(xPos(e.fiveWordMark), midY + rowH / 2 - 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Count label
+    ctx.fillStyle = 'rgba(45,27,105,0.5)';
+    ctx.font = '10px Varela Round, sans-serif';
+    ctx.textAlign = 'left';
+    const countX = xPos(lastIndex) + 10;
+    if (countX < W - 30) {
+      ctx.fillText(e.count, countX, midY + 3);
+    }
+  });
+
+  // Tooltip
+  const tipEl = document.getElementById('acqEmergenceTip');
+  canvas.onclick = function (e) {
+    if (!tipEl) return;
+    const rect = canvas.getBoundingClientRect();
+    const my = e.clientY - rect.top;
+    const ci = Math.floor((my - PAD.top) / (rowH + gap));
+    if (ci < 0 || ci >= activeCats.length) return;
+    const cat = activeCats[ci];
+    const em = emergence[cat];
+    let html = '<div class="acq-tip-card">';
+    html += '<strong style="color:' + AA.CAT_COLORS[cat] + '">' + AA.CAT_LABELS[cat] + '</strong> — ' + em.count + ' מילים<br>';
+    html += 'מילה ראשונה: <strong>' + em.firstWord + '</strong> (#' + em.firstIndex + ')<br>';
+    if (em.fiveWordMark > 0) html += 'הגיעו ל-5 מילים במילה #' + em.fiveWordMark + '<br>';
+    html += 'מילים: ' + em.words.map(w => w.word).join(', ');
+    html += '</div>';
+    tipEl.innerHTML = html;
+  };
+}
+
+/* ===== Chapter 5: Noun Bias Curve ===== */
+function drawAcqNounBias(ordered, AA) {
+  const canvas = document.getElementById('acqNounBiasCanvas');
+  const titleEl = document.getElementById('acqNounBiasTitle');
+  if (!canvas) return;
+
+  const nounData = AA.getNounBiasData(ordered);
+  if (titleEl) titleEl.textContent = AA.getNounBiasTitle(nounData);
+  if (nounData.length < 3) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.offsetWidth;
+  const H = 240;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const PAD = { top: 16, right: 16, bottom: 36, left: 42 };
+  const cW = W - PAD.left - PAD.right;
+  const cH = H - PAD.top - PAD.bottom;
+  const n = nounData.length;
+
+  function xPos(i) { return PAD.left + (i / Math.max(n - 1, 1)) * cW; }
+  function yPos(pct) { return PAD.top + cH - (pct / 100) * cH; }
+
+  ctx.clearRect(0, 0, W, H);
+
+  // "Healthy zone" background (30-60%)
+  ctx.fillStyle = 'rgba(76,205,196,0.06)';
+  ctx.fillRect(PAD.left, yPos(60), cW, yPos(30) - yPos(60));
+
+  // Grid
+  for (let v = 0; v <= 100; v += 20) {
+    ctx.strokeStyle = 'rgba(108,92,231,0.06)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(PAD.left, yPos(v));
+    ctx.lineTo(W - PAD.right, yPos(v));
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(108,92,231,0.45)';
+    ctx.font = '10px Varela Round, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(v + '%', PAD.left - 6, yPos(v) + 3);
+  }
+
+  // 50% reference line
+  ctx.save();
+  ctx.strokeStyle = 'rgba(108,92,231,0.2)';
+  ctx.setLineDash([6, 4]);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(PAD.left, yPos(50));
+  ctx.lineTo(W - PAD.right, yPos(50));
+  ctx.stroke();
+  ctx.restore();
+
+  // X-axis labels
+  const milestones = AA.getDynamicMilestones(n);
+  ctx.fillStyle = 'rgba(108,92,231,0.5)';
+  ctx.font = '10px Varela Round, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('1', xPos(0), H - PAD.bottom + 16);
+  milestones.forEach(m => {
+    ctx.fillText(m, xPos(m - 1), H - PAD.bottom + 16);
+  });
+
+  // Area fill under curve
+  const grad = ctx.createLinearGradient(0, yPos(100), 0, yPos(0));
+  grad.addColorStop(0, 'rgba(108,92,231,0.02)');
+  grad.addColorStop(1, 'rgba(108,92,231,0.18)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.moveTo(xPos(0), yPos(0));
+  for (let i = 0; i < n; i++) {
+    if (i === 0) ctx.moveTo(xPos(i), yPos(nounData[i].nounPct));
+    else {
+      const cpx = (xPos(i - 1) + xPos(i)) / 2;
+      ctx.bezierCurveTo(cpx, yPos(nounData[i - 1].nounPct), cpx, yPos(nounData[i].nounPct), xPos(i), yPos(nounData[i].nounPct));
+    }
+  }
+  ctx.lineTo(xPos(n - 1), yPos(0));
+  ctx.lineTo(xPos(0), yPos(0));
+  ctx.closePath();
+  ctx.fill();
+
+  // Line
+  ctx.strokeStyle = '#6C5CE7';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    if (i === 0) ctx.moveTo(xPos(i), yPos(nounData[i].nounPct));
+    else {
+      const cpx = (xPos(i - 1) + xPos(i)) / 2;
+      ctx.bezierCurveTo(cpx, yPos(nounData[i - 1].nounPct), cpx, yPos(nounData[i].nounPct), xPos(i), yPos(nounData[i].nounPct));
+    }
+  }
+  ctx.stroke();
+
+  // Milestone dots
+  milestones.forEach(m => {
+    const idx = Math.min(m - 1, n - 1);
+    ctx.beginPath();
+    ctx.arc(xPos(idx), yPos(nounData[idx].nounPct), 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#6C5CE7';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+
+  // Tooltip
+  const tipEl = document.getElementById('acqNounBiasTip');
+  canvas.onclick = function (e) {
+    if (!tipEl) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    let closest = 0, minDist = Infinity;
+    for (let i = 0; i < n; i++) {
+      const d = Math.abs(mx - xPos(i));
+      if (d < minDist) { minDist = d; closest = i; }
+    }
+    const d = nounData[closest];
+    tipEl.innerHTML = '<div class="acq-tip-card"><strong>מילה #' + d.index + ': ' + d.word + '</strong><br>' +
+      'שמות עצם: ' + d.nounPct + '% מכלל המילים המסווגות</div>';
+  };
+}
+
+/* ===== Chapter 6: Sub-category Radar Chart ===== */
+function drawAcqRadar(ordered, AA) {
+  const canvas = document.getElementById('acqRadarCanvas');
+  const titleEl = document.getElementById('acqRadarTitle');
+  const layersEl = document.getElementById('acqRadarLayers');
+  if (!canvas) return;
+
+  if (titleEl) titleEl.textContent = AA.getRadarTitle(ordered);
+
+  const milestones = AA.getDynamicMilestones(ordered.length);
+  // Use up to 3 milestones for layers: first, middle, last
+  let radarMilestones;
+  if (milestones.length <= 3) {
+    radarMilestones = milestones;
+  } else {
+    radarMilestones = [milestones[0], milestones[Math.floor(milestones.length / 2)], milestones[milestones.length - 1]];
+  }
+
+  const radarData = AA.getSubCategoryData(ordered, radarMilestones);
+  const axes = radarData.subKeys.slice(0, 10); // Max 10 axes
+  if (axes.length < 3) return;
+
+  // Layer toggle buttons
+  if (layersEl) {
+    layersEl.innerHTML = '';
+    const layerColors = ['rgba(108,92,231,0.25)', 'rgba(108,92,231,0.5)', 'rgba(255,107,157,0.7)'];
+    radarMilestones.forEach((m, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'acq-radar-layer-btn active';
+      btn.dataset.layer = i;
+      btn.style.borderColor = layerColors[Math.min(i, layerColors.length - 1)];
+      btn.textContent = 'מילה ' + m;
+      btn.addEventListener('click', () => {
+        btn.classList.toggle('active');
+        drawRadarChart(canvas, radarData, axes, radarMilestones, layersEl, AA);
+      });
+      layersEl.appendChild(btn);
+    });
+  }
+
+  drawRadarChart(canvas, radarData, axes, radarMilestones, layersEl, AA);
+}
+
+function drawRadarChart(canvas, radarData, axes, radarMilestones, layersEl, AA) {
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.offsetWidth;
+  const H = Math.min(W, 360);
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const cx = W / 2;
+  const cy = H / 2;
+  const R = Math.min(cx, cy) - 50;
+  const angleStep = (Math.PI * 2) / axes.length;
+
+  // Active layers
+  const layerBtns = layersEl ? layersEl.querySelectorAll('.acq-radar-layer-btn') : [];
+  const activeLayers = [];
+  layerBtns.forEach((btn, i) => {
+    if (btn.classList.contains('active')) activeLayers.push(i);
+  });
+  if (activeLayers.length === 0) {
+    // If all toggled off, show last
+    activeLayers.push(radarMilestones.length - 1);
+  }
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Grid rings
+  for (let ring = 1; ring <= 4; ring++) {
+    const r = (ring / 4) * R;
+    ctx.strokeStyle = 'rgba(108,92,231,0.08)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let a = 0; a < axes.length; a++) {
+      const angle = -Math.PI / 2 + a * angleStep;
+      const px = cx + Math.cos(angle) * r;
+      const py = cy + Math.sin(angle) * r;
+      if (a === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  // Axis lines and labels
+  axes.forEach((sub, a) => {
+    const angle = -Math.PI / 2 + a * angleStep;
+    const ex = cx + Math.cos(angle) * R;
+    const ey = cy + Math.sin(angle) * R;
+
+    ctx.strokeStyle = 'rgba(108,92,231,0.1)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+
+    // Label
+    const labelR = R + 18;
+    const lx = cx + Math.cos(angle) * labelR;
+    const ly = cy + Math.sin(angle) * labelR;
+    ctx.fillStyle = 'rgba(45,27,105,0.7)';
+    ctx.font = '10px Varela Round, sans-serif';
+    ctx.textAlign = Math.abs(Math.cos(angle)) < 0.1 ? 'center' : Math.cos(angle) > 0 ? 'left' : 'right';
+    ctx.textBaseline = Math.abs(Math.sin(angle)) < 0.1 ? 'middle' : Math.sin(angle) > 0 ? 'top' : 'bottom';
+    ctx.fillText(AA.SUB_CAT_LABELS[sub] || sub, lx, ly);
+  });
+
+  // Draw layers (from lightest to darkest)
+  const layerColors = [
+    { fill: 'rgba(108,92,231,0.1)', stroke: 'rgba(108,92,231,0.35)' },
+    { fill: 'rgba(108,92,231,0.18)', stroke: 'rgba(108,92,231,0.55)' },
+    { fill: 'rgba(255,107,157,0.2)', stroke: 'rgba(255,107,157,0.7)' }
+  ];
+
+  activeLayers.forEach(li => {
+    const ms = radarData.milestones[li];
+    if (!ms) return;
+    const colors = layerColors[Math.min(li, layerColors.length - 1)];
+    const maxVal = radarData.maxVal || 1;
+
+    ctx.fillStyle = colors.fill;
+    ctx.strokeStyle = colors.stroke;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    axes.forEach((sub, a) => {
+      const val = ms.subs[sub] || 0;
+      const r = (val / maxVal) * R;
+      const angle = -Math.PI / 2 + a * angleStep;
+      const px = cx + Math.cos(angle) * r;
+      const py = cy + Math.sin(angle) * r;
+      if (a === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    });
+
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Dots on vertices
+    axes.forEach((sub, a) => {
+      const val = ms.subs[sub] || 0;
+      if (val === 0) return;
+      const r = (val / maxVal) * R;
+      const angle = -Math.PI / 2 + a * angleStep;
+      const px = cx + Math.cos(angle) * r;
+      const py = cy + Math.sin(angle) * r;
+      ctx.beginPath();
+      ctx.arc(px, py, 3, 0, Math.PI * 2);
+      ctx.fillStyle = colors.stroke;
+      ctx.fill();
+    });
+  });
+
+  // Tooltip
+  const tipEl = document.getElementById('acqRadarTip');
+  canvas.onclick = function (e) {
+    if (!tipEl) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left - cx;
+    const my = e.clientY - rect.top - cy;
+    // Find closest axis
+    let closestAxis = 0, minAngleDist = Infinity;
+    axes.forEach((sub, a) => {
+      const angle = -Math.PI / 2 + a * angleStep;
+      const clickAngle = Math.atan2(my, mx);
+      let diff = Math.abs(clickAngle - angle);
+      if (diff > Math.PI) diff = Math.PI * 2 - diff;
+      if (diff < minAngleDist) { minAngleDist = diff; closestAxis = a; }
+    });
+    const sub = axes[closestAxis];
+    let html = '<div class="acq-tip-card"><strong>' + (AA.SUB_CAT_LABELS[sub] || sub) + '</strong><br>';
+    radarData.milestones.forEach((ms, i) => {
+      const val = ms.subs[sub] || 0;
+      html += 'מילה ' + radarMilestones[i] + ': ' + val + ' מילים<br>';
+    });
+    html += '</div>';
+    tipEl.innerHTML = html;
+  };
 }
 
 /* ===== Export ===== */

@@ -419,6 +419,80 @@ var AcquisitionAnalysis = (function () {
     return 'שמות עצם יציבים סביב ' + latest + '% - בסיס חזק';
   }
 
+  function getEmergenceTitle(ordered) {
+    if (ordered.length < 10) return 'מתי הופיעה כל קטגוריה';
+    var cats = getCategoryEmergence(ordered);
+    var babyName = (typeof BABY_NAME !== 'undefined') ? BABY_NAME : 'התינוק';
+    var earliest = null, latest = null;
+    CAT_ORDER.forEach(function (c) {
+      var e = cats[c];
+      if (e.count === 0) return;
+      if (!earliest || e.firstIndex < earliest.firstIndex) earliest = e;
+      if (!latest || e.firstIndex > latest.firstIndex) latest = e;
+    });
+    if (earliest && latest && earliest.key !== latest.key) {
+      return earliest.label + ' הגיעו ראשונות, ' + latest.label + ' רק במילה ' + latest.firstIndex;
+    }
+    return 'סדר הופעת הקטגוריות באוצר המילים של ' + babyName;
+  }
+
+  function getSubCategoryData(ordered, milestones) {
+    var results = [];
+    milestones.forEach(function (m) {
+      var slice = ordered.slice(0, m);
+      var subCounts = {};
+      slice.forEach(function (w) {
+        if (w.sub_category) {
+          subCounts[w.sub_category] = (subCounts[w.sub_category] || 0) + 1;
+        }
+      });
+      results.push({ milestone: m, subs: subCounts });
+    });
+    // Collect all active sub-categories
+    var allSubs = {};
+    results.forEach(function (r) {
+      Object.keys(r.subs).forEach(function (s) { allSubs[s] = true; });
+    });
+    var subKeys = Object.keys(allSubs).sort(function (a, b) {
+      // Sort by total count descending
+      var totalA = 0, totalB = 0;
+      results.forEach(function (r) {
+        totalA += r.subs[a] || 0;
+        totalB += r.subs[b] || 0;
+      });
+      return totalB - totalA;
+    });
+    // Find max value for scaling
+    var maxVal = 0;
+    results.forEach(function (r) {
+      subKeys.forEach(function (s) {
+        if ((r.subs[s] || 0) > maxVal) maxVal = r.subs[s];
+      });
+    });
+    return { milestones: results, subKeys: subKeys, maxVal: maxVal };
+  }
+
+  function getRadarTitle(ordered) {
+    if (ordered.length < 10) return 'העולם של התינוק';
+    var babyName = (typeof BABY_NAME !== 'undefined') ? BABY_NAME : 'התינוק';
+    var subCounts = {};
+    ordered.forEach(function (w) {
+      if (w.sub_category) subCounts[w.sub_category] = true;
+    });
+    var count = Object.keys(subCounts).length;
+    // Check how many at first 25%
+    var earlyCount = {};
+    var quarter = Math.max(1, Math.floor(ordered.length * 0.25));
+    ordered.slice(0, quarter).forEach(function (w) {
+      if (w.sub_category) earlyCount[w.sub_category] = true;
+    });
+    var earlyN = Object.keys(earlyCount).length;
+    if (count > earlyN + 3) {
+      return 'העולם של ' + babyName + ' מתרחב - מ-' + earlyN + ' תחומים ל-' + count + ' תחומים';
+    }
+    return 'העולם של ' + babyName + ' ב-' + count + ' תחומים שונים';
+  }
+
   // ==========================================
   // PUBLIC API
   // ==========================================
@@ -439,6 +513,9 @@ var AcquisitionAnalysis = (function () {
     getStreamTitle: getStreamTitle,
     getPulseTitle: getPulseTitle,
     getMilestoneTitle: getMilestoneTitle,
-    getNounBiasTitle: getNounBiasTitle
+    getNounBiasTitle: getNounBiasTitle,
+    getEmergenceTitle: getEmergenceTitle,
+    getSubCategoryData: getSubCategoryData,
+    getRadarTitle: getRadarTitle
   };
 })();
