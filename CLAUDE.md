@@ -365,7 +365,7 @@ All acquisition-order-based analysis (streaks, insights, charts) must account fo
 grep 'app.js?v=' index.html && grep 'styles.css?v=' index.html && grep 'vocab-charts.js?v=' index.html
 ```
 
-Increment `?v=N` for every file you changed. Current versions: styles.css?v=19, app.js?v=20, acquisition-analysis.js?v=2, vocab-charts.js?v=12.
+Increment `?v=N` for every file you changed. Current versions: styles.css?v=19, app.js?v=21, acquisition-analysis.js?v=2, vocab-charts.js?v=12.
 
 ### 2. RTL Arrows
 
