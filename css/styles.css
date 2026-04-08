@@ -2693,3 +2693,277 @@ body::-webkit-scrollbar-thumb {
   text-align: center;
   animation: tipFadeIn 0.3s ease;
 }
+
+/* =============================================
+   Category Picker
+   ============================================= */
+.cat-picker-section {
+  margin-top: 1rem;
+  border-top: 1px solid rgba(108,92,231,0.1);
+  padding-top: 0.8rem;
+}
+.cat-picker-label {
+  display: block;
+  font-family: 'Varela Round', sans-serif;
+  font-size: 0.85rem;
+  color: var(--soft-purple);
+  margin-bottom: 0.5rem;
+}
+.cat-picker-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.subcat-picker-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.cat-pill {
+  border: 2px solid var(--cat-color, #ccc);
+  background: transparent;
+  color: var(--deep-purple);
+  border-radius: 50px;
+  padding: 0.3rem 0.8rem;
+  font-family: 'Varela Round', sans-serif;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.cat-pill:hover {
+  background: color-mix(in srgb, var(--cat-color) 15%, transparent);
+}
+.cat-pill.active {
+  background: var(--cat-color);
+  color: #fff;
+  border-color: var(--cat-color);
+}
+.subcat-pill {
+  border: 1px solid rgba(108,92,231,0.2);
+  background: var(--lavender);
+  color: var(--deep-purple);
+  border-radius: 50px;
+  padding: 0.2rem 0.7rem;
+  font-family: 'Varela Round', sans-serif;
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.subcat-pill:hover {
+  background: rgba(108,92,231,0.15);
+}
+.subcat-pill.active {
+  background: var(--soft-purple);
+  color: #fff;
+  border-color: var(--soft-purple);
+}
+
+/* =============================================
+   Trends Tabs
+   ============================================= */
+.trends-tabs {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 1.2rem;
+}
+.trends-tab {
+  border: none;
+  background: var(--lavender);
+  color: var(--deep-purple);
+  border-radius: 50px;
+  padding: 0.5rem 1.4rem;
+  font-family: 'Secular One', sans-serif;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.trends-tab:hover {
+  background: rgba(108,92,231,0.2);
+}
+.trends-tab.active {
+  background: linear-gradient(135deg, #6C5CE7, #FF6B9D);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(108,92,231,0.3);
+}
+.trends-tab-content {
+  display: none;
+}
+.trends-tab-content.active {
+  display: block;
+}
+
+/* =============================================
+   Acquisition Analysis Cards
+   ============================================= */
+.acq-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 1.4rem;
+  margin-bottom: 1.2rem;
+  box-shadow: var(--card-shadow);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+.acq-card:hover {
+  box-shadow: var(--card-shadow-hover);
+}
+.acq-card-title {
+  font-family: 'Secular One', sans-serif;
+  font-size: 1.05rem;
+  color: var(--deep-purple);
+  margin: 0 0 0.3rem;
+}
+.acq-card-subtitle {
+  font-family: 'Varela Round', sans-serif;
+  font-size: 0.78rem;
+  color: rgba(108,92,231,0.55);
+  margin: 0 0 1rem;
+}
+.acq-chart-wrap {
+  width: 100%;
+  position: relative;
+}
+.acq-chart-wrap canvas {
+  width: 100%;
+  display: block;
+}
+
+/* Slider row */
+.acq-slider-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 0.8rem;
+}
+.acq-slider-label {
+  font-family: 'Varela Round', sans-serif;
+  font-size: 0.82rem;
+  color: var(--soft-purple);
+}
+.acq-window-btns {
+  display: flex;
+  gap: 4px;
+}
+.acq-window-btn {
+  border: 1px solid rgba(108,92,231,0.2);
+  background: var(--lavender);
+  color: var(--deep-purple);
+  border-radius: 8px;
+  padding: 0.3rem 0.7rem;
+  font-family: 'Varela Round', sans-serif;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 32px;
+  text-align: center;
+}
+.acq-window-btn:hover {
+  background: rgba(108,92,231,0.18);
+}
+.acq-window-btn.active {
+  background: var(--soft-purple);
+  color: #fff;
+  border-color: var(--soft-purple);
+}
+
+/* Tooltip */
+.acq-tooltip {
+  font-family: 'Varela Round', sans-serif;
+  font-size: 0.8rem;
+  color: var(--deep-purple);
+  margin-top: 0.6rem;
+  min-height: 1rem;
+}
+.acq-tip-card {
+  background: var(--lavender);
+  border-radius: 14px;
+  padding: 0.7rem 1rem;
+  animation: tipFadeIn 0.3s ease;
+  line-height: 1.7;
+}
+
+/* Legend */
+.acq-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 0.8rem;
+  justify-content: center;
+}
+.acq-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Varela Round', sans-serif;
+  font-size: 0.75rem;
+  color: var(--deep-purple);
+}
+.acq-legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Insights */
+.acq-insights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.acq-insight-card {
+  background: linear-gradient(135deg, var(--lavender), rgba(108,92,231,0.08));
+  border-radius: 14px;
+  padding: 1rem 1.2rem;
+  border-right: 4px solid var(--soft-purple);
+  transition: transform 0.2s ease;
+}
+.acq-insight-card:hover {
+  transform: translateX(-3px);
+}
+.acq-insight-text {
+  font-family: 'Varela Round', sans-serif;
+  font-size: 0.88rem;
+  color: var(--deep-purple);
+  line-height: 1.7;
+}
+.acq-insight-empty {
+  text-align: center;
+  font-family: 'Varela Round', sans-serif;
+  font-size: 0.85rem;
+  color: rgba(108,92,231,0.4);
+  padding: 2rem;
+}
+
+/* Mobile responsiveness for acquisition */
+@media (max-width: 600px) {
+  .acq-card {
+    padding: 1rem;
+    border-radius: 16px;
+  }
+  .acq-card-title {
+    font-size: 0.95rem;
+  }
+  .trends-tabs {
+    gap: 4px;
+  }
+  .trends-tab {
+    padding: 0.4rem 1rem;
+    font-size: 0.82rem;
+  }
+  .cat-picker-row {
+    gap: 4px;
+  }
+  .cat-pill {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.72rem;
+  }
+  .acq-window-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    min-width: 28px;
+  }
+}

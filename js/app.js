@@ -236,6 +236,8 @@ let currentView = 'timeline';
 let searchQuery = '';
 let viewBeforeSearch = null; // remembers view before search auto-switched to grid
 let addFlowLinkedTo = null; // linked_to for the add-word flow
+let addFlowCategory = null; // cdi_category for add flow
+let addFlowSubCategory = null; // sub_category for add flow
 let filterMonth = null; // selected age_months filter (null = all)
 let filterCategory = null; // selected CDI category filter (null = all)
 let vocabLookup = {}; // word text → vocabulary.json entry (for category lookup)
@@ -256,13 +258,101 @@ const CDI_CAT_COLORS = {
   personal_social: '#CE93D8',
 };
 
+const CDI_SUB_CATEGORIES = {
+  general_nominals: [
+    { key: 'animals', label: 'חיות' },
+    { key: 'food_drink', label: 'אוכל ושתייה' },
+    { key: 'body_parts', label: 'גוף' },
+    { key: 'clothing', label: 'ביגוד' },
+    { key: 'household', label: 'בית' },
+    { key: 'toys_and_routines', label: 'צעצועים' },
+    { key: 'outside', label: 'חוץ' },
+  ],
+  specific_nominals: [
+    { key: 'people', label: 'אנשים' },
+  ],
+  action_words: [
+    { key: 'actions', label: 'פעולות' },
+  ],
+  modifiers: [
+    { key: 'attributes', label: 'תכונות' },
+  ],
+  personal_social: [
+    { key: 'routines_and_games', label: 'שגרה ומשחקים' },
+    { key: 'sound_effects', label: 'אפקטי קול' },
+    { key: 'assertions', label: 'ביטויים' },
+  ],
+};
+
+/* ===== Category Picker Builder ===== */
+function buildCategoryPicker(container, selectedCat, selectedSub, onChange) {
+  container.innerHTML = '';
+
+  const catRow = document.createElement('div');
+  catRow.className = 'cat-picker-row';
+
+  const catOrder = ['general_nominals', 'specific_nominals', 'personal_social', 'action_words', 'modifiers'];
+  catOrder.forEach(key => {
+    const pill = document.createElement('button');
+    pill.type = 'button';
+    pill.className = 'cat-pill' + (selectedCat === key ? ' active' : '');
+    pill.dataset.cat = key;
+    pill.style.setProperty('--cat-color', CDI_CAT_COLORS[key]);
+    pill.textContent = CDI_CAT_LABELS[key];
+    pill.addEventListener('click', () => {
+      catRow.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      const newCat = key;
+      buildSubCategoryPills(subRow, newCat, null);
+      if (onChange) onChange(newCat, null);
+    });
+    catRow.appendChild(pill);
+  });
+
+  const subRow = document.createElement('div');
+  subRow.className = 'subcat-picker-row';
+
+  function buildSubCategoryPills(row, cat, activeSub) {
+    row.innerHTML = '';
+    if (!cat || !CDI_SUB_CATEGORIES[cat]) return;
+    const subs = CDI_SUB_CATEGORIES[cat];
+    if (subs.length <= 1) {
+      // Auto-select single sub-category
+      if (subs.length === 1 && onChange) onChange(cat, subs[0].key);
+      return;
+    }
+    subs.forEach(sub => {
+      const pill = document.createElement('button');
+      pill.type = 'button';
+      pill.className = 'subcat-pill' + (activeSub === sub.key ? ' active' : '');
+      pill.dataset.sub = sub.key;
+      pill.textContent = sub.label;
+      pill.addEventListener('click', () => {
+        row.querySelectorAll('.subcat-pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        if (onChange) onChange(cat, sub.key);
+      });
+      row.appendChild(pill);
+    });
+  }
+
+  container.appendChild(catRow);
+  container.appendChild(subRow);
+
+  if (selectedCat) {
+    buildSubCategoryPills(subRow, selectedCat, selectedSub);
+  }
+}
+
 /* ===== Initialize ===== */
 document.addEventListener('DOMContentLoaded', async () => {
   initSupabase();
+  await ensureCategoryColumns();
   setupEventListeners();
   buildAgeOptions(ageOptions, null);
   await loadVocabLookup();
   await loadWords();
+  await migrateVocabCategories();
 
   // Debug: show connection status in console
   console.log('[WordByDandan] supabase client:', db ? 'connected' : 'MISSING');
@@ -612,7 +702,22 @@ function selectAge(months) {
     notesTitle.textContent = `רוצים להוסיף הקשר ל"${currentWord}"? 📝`;
     notesInput.textContent = '';
     addFlowLinkedTo = null;
+    addFlowCategory = null;
+    addFlowSubCategory = null;
     setupAddFlowLinking();
+    // Init category picker in add flow
+    const addCatContainer = document.getElementById('addFlowCatPickerContainer');
+    if (addCatContainer) {
+      // Auto-detect category from vocabLookup
+      const vocabEntry = vocabLookup[currentWord];
+      const preCat = vocabEntry ? vocabEntry.cdi_category : null;
+      const preSub = vocabEntry ? vocabEntry.sub_category : null;
+      if (preCat) { addFlowCategory = preCat; addFlowSubCategory = preSub; }
+      buildCategoryPicker(addCatContainer, preCat !== 'unclear' ? preCat : null, preSub !== 'unclear' ? preSub : null, (cat, sub) => {
+        addFlowCategory = cat;
+        addFlowSubCategory = sub;
+      });
+    }
     notesSection.classList.remove('hidden');
     notesSection.querySelector('.notes-container').classList.add('fade-in');
   }, 400);
@@ -739,6 +844,12 @@ async function saveNewWord(notes) {
       if (addFlowLinkedTo) {
         wordData.linked_to = addFlowLinkedTo;
       }
+      if (addFlowCategory) {
+        wordData.cdi_category = addFlowCategory;
+      }
+      if (addFlowSubCategory) {
+        wordData.sub_category = addFlowSubCategory;
+      }
       await insertWord(wordData);
 
       showSuccess(`"${currentWord}" נוספה! 🌟`);
@@ -748,6 +859,8 @@ async function saveNewWord(notes) {
       showSuccess('אופס, משהו השתבש 😅');
     } finally {
       addFlowLinkedTo = null;
+      addFlowCategory = null;
+      addFlowSubCategory = null;
       resetInput();
     }
   }, 300);
@@ -965,7 +1078,6 @@ async function loadVocabLookup() {
     const data = await res.json();
     vocabLookup = {};
     data.forEach((entry) => {
-      // Index by the word text (exact match)
       vocabLookup[entry.word] = entry;
     });
   } catch (e) {
@@ -974,12 +1086,58 @@ async function loadVocabLookup() {
   }
 }
 
-function getWordCategory(wordText) {
-  const entry = vocabLookup[wordText];
+/* ===== Migrate categories from vocabulary.json to DB ===== */
+async function migrateVocabCategories() {
+  if (!words.length || !Object.keys(vocabLookup).length) return;
+  const toMigrate = words.filter(w => !w.cdi_category && vocabLookup[w.word]);
+  for (const w of toMigrate) {
+    const entry = vocabLookup[w.word];
+    try {
+      await updateWord(w.id, {
+        cdi_category: entry.cdi_category,
+        sub_category: entry.sub_category,
+      });
+      w.cdi_category = entry.cdi_category;
+      w.sub_category = entry.sub_category;
+    } catch (e) {
+      console.warn('Migration failed for:', w.word, e);
+    }
+  }
+  if (toMigrate.length > 0) {
+    console.log(`[WordByDandan] Migrated categories for ${toMigrate.length} words`);
+  }
+}
+
+/* ===== Ensure DB columns exist (Supabase migration) ===== */
+async function ensureCategoryColumns() {
+  if (!db) return;
+  try {
+    // Try a harmless query with the new columns - if it fails, columns don't exist yet
+    const { error } = await db.from('words').select('cdi_category').limit(1);
+    if (error && error.message.includes('cdi_category')) {
+      console.warn('[WordByDandan] cdi_category column not found - run schema migration');
+    }
+  } catch (e) {
+    // Silently continue - columns will be added when schema is run
+  }
+}
+
+function getWordCategory(wordOrText) {
+  // If passed a word object with cdi_category, use it directly
+  if (typeof wordOrText === 'object' && wordOrText.cdi_category && wordOrText.cdi_category !== 'unclear') {
+    return wordOrText.cdi_category;
+  }
+  const text = typeof wordOrText === 'string' ? wordOrText : wordOrText.word;
+  const entry = vocabLookup[text];
   if (entry && entry.cdi_category && entry.cdi_category !== 'unclear') {
     return entry.cdi_category;
   }
-  return null; // uncategorized or unclear
+  return null;
+}
+
+function getWordCategoryFromObj(w) {
+  if (w.cdi_category && w.cdi_category !== 'unclear') return w.cdi_category;
+  return getWordCategory(w.word);
 }
 
 /* ===== Filter Pills ===== */
@@ -1301,6 +1459,14 @@ function switchToEditMode() {
   linkSearchInput.value = '';
   linkResults.classList.add('hidden');
 
+  // Init category picker for edit modal
+  const editCatContainer = document.getElementById('editCatPickerContainer');
+  if (editCatContainer) {
+    const curCat = viewingWord.cdi_category || null;
+    const curSub = viewingWord.sub_category || null;
+    buildCategoryPicker(editCatContainer, curCat !== 'unclear' ? curCat : null, curSub !== 'unclear' ? curSub : null, () => {});
+  }
+
   wordViewMode.classList.add('hidden');
   wordEditMode.classList.remove('hidden');
 }
@@ -1363,12 +1529,20 @@ async function handleEditSave() {
   const ageMonths = selectedAge ? parseInt(selectedAge.dataset.months) : null;
   const notes = getInputText(editNotesInput).trim() || null;
 
+  // Get category from edit modal
+  const editCatSelected = editModal.querySelector('.cat-pill.active');
+  const editCdiCategory = editCatSelected ? editCatSelected.dataset.cat : null;
+  const editSubCatSelected = editModal.querySelector('.subcat-pill.active');
+  const editSubCategory = editSubCatSelected ? editSubCatSelected.dataset.sub : null;
+
   try {
     await updateWord(editingWordId, {
       word,
       age_months: ageMonths,
       notes,
       linked_to: editingLinkedTo,
+      cdi_category: editCdiCategory,
+      sub_category: editSubCategory,
     });
 
     // Bidirectional: if linking X→Y and Y has no link, set Y→X
@@ -2311,8 +2485,492 @@ function renderTrends() {
 let trendsResizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(trendsResizeTimer);
-  trendsResizeTimer = setTimeout(renderTrends, 250);
+  trendsResizeTimer = setTimeout(() => {
+    renderTrends();
+    renderAcquisitionCharts();
+  }, 250);
 });
+
+/* ===== Trends Tabs ===== */
+document.addEventListener('DOMContentLoaded', () => {
+  const tabs = document.querySelectorAll('.trends-tab');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const targetId = tab.dataset.tab;
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      document.querySelectorAll('.trends-tab-content').forEach(c => c.classList.remove('active'));
+      const target = document.getElementById(targetId);
+      if (target) {
+        target.classList.add('active');
+        if (targetId === 'acquisitionView') {
+          renderAcquisitionCharts();
+        }
+      }
+    });
+  });
+
+  // Window size buttons for pulse chart
+  const windowBtns = document.querySelectorAll('.acq-window-btn');
+  windowBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      windowBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      acqWindowSize = parseInt(btn.dataset.size);
+      renderAcquisitionCharts();
+    });
+  });
+});
+
+/* ===== Acquisition Charts Rendering ===== */
+let acqWindowSize = 10;
+
+function renderAcquisitionCharts() {
+  if (typeof AcquisitionAnalysis === 'undefined') return;
+  if (!words.length) return;
+
+  const ordered = AcquisitionAnalysis.getAcquisitionOrder(words);
+  if (ordered.length < 3) return;
+
+  const AA = AcquisitionAnalysis;
+
+  // Build legend helper
+  function buildAcqLegend(containerId) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = '';
+    AA.CAT_ORDER.forEach(c => {
+      const span = document.createElement('span');
+      span.className = 'acq-legend-item';
+      span.innerHTML = '<span class="acq-legend-dot" style="background:' + AA.CAT_COLORS[c] + '"></span>' + AA.CAT_LABELS[c];
+      el.appendChild(span);
+    });
+  }
+
+  // ---- CHAPTER 1: Acquisition Stream (stacked area) ----
+  drawAcqStream(ordered, AA);
+  buildAcqLegend('acqStreamLeg');
+
+  // ---- CHAPTER 2: Rolling Category Mix ----
+  drawAcqPulse(ordered, AA);
+  buildAcqLegend('acqPulseLeg');
+
+  // ---- CHAPTER 3: Milestone Comparison ----
+  drawAcqMilestones(ordered, AA);
+  buildAcqLegend('acqMilestonesLeg');
+
+  // ---- CHAPTER 4: Insights ----
+  renderInsights(ordered, AA);
+
+  // Observe for scroll reveal
+  requestAnimationFrame(() => observeRevealElements());
+}
+
+/* ===== Chapter 1: Acquisition Stream ===== */
+function drawAcqStream(ordered, AA) {
+  const canvas = document.getElementById('acqStreamCanvas');
+  const titleEl = document.getElementById('acqStreamTitle');
+  if (!canvas) return;
+
+  if (titleEl) titleEl.textContent = AA.getStreamTitle(ordered);
+
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.offsetWidth;
+  const H = 280;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const PAD = { top: 16, right: 12, bottom: 36, left: 38 };
+  const cW = W - PAD.left - PAD.right;
+  const cH = H - PAD.top - PAD.bottom;
+  const n = ordered.length;
+
+  // Build cumulative stacks
+  const stacks = [];
+  const cumulCounts = {};
+  AA.CAT_ORDER.forEach(c => { cumulCounts[c] = 0; });
+  let maxStack = 0;
+
+  ordered.forEach((w, i) => {
+    if (w.category && cumulCounts.hasOwnProperty(w.category)) {
+      cumulCounts[w.category]++;
+    }
+    const row = {};
+    let total = 0;
+    AA.CAT_ORDER.forEach(c => {
+      row[c] = cumulCounts[c];
+      total += cumulCounts[c];
+    });
+    row._total = total;
+    if (total > maxStack) maxStack = total;
+    stacks.push(row);
+  });
+
+  const yMax = Math.ceil(maxStack / 5) * 5 || 5;
+  function xPos(i) { return PAD.left + (i / Math.max(n - 1, 1)) * cW; }
+  function yPos(v) { return PAD.top + cH - (v / yMax) * cH; }
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(108,92,231,0.08)';
+  ctx.lineWidth = 1;
+  for (let v = 0; v <= yMax; v += Math.max(1, Math.floor(yMax / 4))) {
+    ctx.beginPath();
+    ctx.moveTo(PAD.left, yPos(v));
+    ctx.lineTo(W - PAD.right, yPos(v));
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(108,92,231,0.5)';
+    ctx.font = '11px Varela Round, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(v, PAD.left - 6, yPos(v) + 4);
+  }
+
+  // X-axis labels
+  const milestones = AA.getDynamicMilestones(n);
+  // Always show word 1 label
+  ctx.fillStyle = 'rgba(108,92,231,0.6)';
+  ctx.font = '10px Varela Round, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('1', xPos(0), H - PAD.bottom + 16);
+
+  milestones.forEach(m => {
+    const x = xPos(m - 1);
+    ctx.fillStyle = 'rgba(108,92,231,0.6)';
+    ctx.fillText(m, x, H - PAD.bottom + 16);
+    // Dashed milestone line
+    ctx.save();
+    ctx.strokeStyle = 'rgba(108,92,231,0.15)';
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(x, PAD.top);
+    ctx.lineTo(x, PAD.top + cH);
+    ctx.stroke();
+    ctx.restore();
+  });
+
+  // Draw stacked areas
+  const reversedCats = AA.CAT_ORDER.slice().reverse();
+  const baseStack = new Array(n).fill(0);
+
+  reversedCats.forEach(c => {
+    const tops = [];
+    const bottoms = [];
+    for (let i = 0; i < n; i++) {
+      const bottom = baseStack[i];
+      const top = bottom + (stacks[i][c] || 0);
+      bottoms.push({ x: xPos(i), y: yPos(bottom) });
+      tops.push({ x: xPos(i), y: yPos(top) });
+      baseStack[i] = top;
+    }
+
+    ctx.fillStyle = AA.CAT_COLORS[c];
+    ctx.globalAlpha = 0.75;
+    ctx.beginPath();
+    ctx.moveTo(tops[0].x, tops[0].y);
+    for (let i = 1; i < tops.length; i++) {
+      const cpx = (tops[i - 1].x + tops[i].x) / 2;
+      ctx.bezierCurveTo(cpx, tops[i - 1].y, cpx, tops[i].y, tops[i].x, tops[i].y);
+    }
+    for (let j = bottoms.length - 1; j >= 0; j--) {
+      if (j === bottoms.length - 1) {
+        ctx.lineTo(bottoms[j].x, bottoms[j].y);
+      } else {
+        const cpx2 = (bottoms[j + 1].x + bottoms[j].x) / 2;
+        ctx.bezierCurveTo(cpx2, bottoms[j + 1].y, cpx2, bottoms[j].y, bottoms[j].x, bottoms[j].y);
+      }
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  });
+
+  // Tooltip on click/touch
+  const tipEl = document.getElementById('acqStreamTip');
+  canvas.onclick = function (e) {
+    if (!tipEl) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    let closest = 0, minDist = Infinity;
+    for (let i = 0; i < n; i++) {
+      const d = Math.abs(mx - xPos(i));
+      if (d < minDist) { minDist = d; closest = i; }
+    }
+    const w = ordered[closest];
+    const s = stacks[closest];
+    let html = '<div class="acq-tip-card"><strong>מילה #' + w.index + ': ' + w.word + '</strong>';
+    if (w.category) html += ' <span style="color:' + AA.CAT_COLORS[w.category] + '">(' + AA.CAT_LABELS[w.category] + ')</span>';
+    html += '<br>';
+    AA.CAT_ORDER.forEach(c => {
+      if (s[c] > 0) {
+        const pct = s._total > 0 ? Math.round((s[c] / s._total) * 100) : 0;
+        html += '<span class="acq-legend-dot" style="background:' + AA.CAT_COLORS[c] + '"></span> ' + AA.CAT_LABELS[c] + ': ' + s[c] + ' (' + pct + '%)<br>';
+      }
+    });
+    html += '</div>';
+    tipEl.innerHTML = html;
+  };
+}
+
+/* ===== Chapter 2: Rolling Category Mix ===== */
+function drawAcqPulse(ordered, AA) {
+  const canvas = document.getElementById('acqPulseCanvas');
+  const titleEl = document.getElementById('acqPulseTitle');
+  if (!canvas) return;
+
+  const windows = AA.getAllWindows(ordered, acqWindowSize);
+  if (titleEl) titleEl.textContent = AA.getPulseTitle(windows);
+
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.offsetWidth;
+  const rowH = 36;
+  const gap = 8;
+  const H = Math.max(200, windows.length * (rowH + gap) + 60);
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const PAD = { top: 8, right: 12, bottom: 8, left: 70 };
+  const barMaxW = W - PAD.left - PAD.right;
+
+  ctx.clearRect(0, 0, W, H);
+
+  windows.forEach((win, wi) => {
+    const y = PAD.top + wi * (rowH + gap);
+
+    // Label
+    ctx.fillStyle = 'rgba(45,27,105,0.7)';
+    ctx.font = '12px Varela Round, sans-serif';
+    ctx.textAlign = 'right';
+    let label = win.label;
+    if (win.wordCount < acqWindowSize) label += ' (' + win.wordCount + ')';
+    ctx.fillText(label, PAD.left - 8, y + rowH / 2 + 4);
+
+    // Stacked bar
+    let xOffset = PAD.left;
+    AA.CAT_ORDER.forEach(c => {
+      const count = win.counts[c] || 0;
+      if (count === 0) return;
+      const segW = win.total > 0 ? (count / win.total) * barMaxW : 0;
+      if (segW < 1) return;
+
+      ctx.fillStyle = AA.CAT_COLORS[c];
+      ctx.globalAlpha = 0.85;
+
+      // Rounded corners on first/last segments
+      const isFirst = xOffset === PAD.left;
+      const isLast = (xOffset + segW) >= (PAD.left + barMaxW - 1);
+      const r = 6;
+      ctx.beginPath();
+      if (isFirst && isLast) {
+        ctx.moveTo(xOffset + r, y);
+        ctx.arcTo(xOffset + segW, y, xOffset + segW, y + rowH, r);
+        ctx.arcTo(xOffset + segW, y + rowH, xOffset, y + rowH, r);
+        ctx.arcTo(xOffset, y + rowH, xOffset, y, r);
+        ctx.arcTo(xOffset, y, xOffset + segW, y, r);
+      } else if (isFirst) {
+        ctx.moveTo(xOffset + r, y);
+        ctx.lineTo(xOffset + segW, y);
+        ctx.lineTo(xOffset + segW, y + rowH);
+        ctx.arcTo(xOffset, y + rowH, xOffset, y, r);
+        ctx.arcTo(xOffset, y, xOffset + segW, y, r);
+      } else if (isLast) {
+        ctx.moveTo(xOffset, y);
+        ctx.arcTo(xOffset + segW, y, xOffset + segW, y + rowH, r);
+        ctx.arcTo(xOffset + segW, y + rowH, xOffset, y + rowH, r);
+        ctx.lineTo(xOffset, y + rowH);
+        ctx.lineTo(xOffset, y);
+      } else {
+        ctx.rect(xOffset, y, segW, rowH);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Percentage text if segment is wide enough
+      const pct = win.total > 0 ? Math.round((count / win.total) * 100) : 0;
+      if (segW > 32) {
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 11px Secular One, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(pct + '%', xOffset + segW / 2, y + rowH / 2);
+      }
+
+      xOffset += segW;
+    });
+  });
+
+  // Tooltip on click
+  const tipEl = document.getElementById('acqPulseTip');
+  canvas.onclick = function (e) {
+    if (!tipEl) return;
+    const rect = canvas.getBoundingClientRect();
+    const my = e.clientY - rect.top;
+    const wi = Math.floor((my - PAD.top) / (rowH + gap));
+    if (wi < 0 || wi >= windows.length) return;
+    const win = windows[wi];
+    let html = '<div class="acq-tip-card"><strong>מילים ' + win.label + '</strong> (' + win.wordCount + ' מילים)<br>';
+    AA.CAT_ORDER.forEach(c => {
+      const count = win.counts[c] || 0;
+      if (count === 0) return;
+      const pct = win.total > 0 ? Math.round((count / win.total) * 100) : 0;
+      const examples = win.words.filter(w => w.category === c).map(w => w.word).join(', ');
+      html += '<span class="acq-legend-dot" style="background:' + AA.CAT_COLORS[c] + '"></span> ' +
+        AA.CAT_LABELS[c] + ': ' + count + ' (' + pct + '%) <span style="opacity:0.6">(' + examples + ')</span><br>';
+    });
+    html += '</div>';
+    tipEl.innerHTML = html;
+  };
+}
+
+/* ===== Chapter 3: Milestone Comparison ===== */
+function drawAcqMilestones(ordered, AA) {
+  const canvas = document.getElementById('acqMilestonesCanvas');
+  const titleEl = document.getElementById('acqMilestonesTitle');
+  if (!canvas) return;
+
+  const milestoneData = AA.getMilestoneData(ordered);
+  if (titleEl) titleEl.textContent = AA.getMilestoneTitle(milestoneData);
+
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.offsetWidth;
+  const rowH = 42;
+  const gap = 12;
+  const H = Math.max(200, milestoneData.length * (rowH + gap) + 40);
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const PAD = { top: 12, right: 12, bottom: 8, left: 75 };
+  const barMaxW = W - PAD.left - PAD.right;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // 50% reference line
+  const fiftyX = PAD.left + barMaxW * 0.5;
+  ctx.strokeStyle = 'rgba(108,92,231,0.12)';
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(fiftyX, 0);
+  ctx.lineTo(fiftyX, H);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(108,92,231,0.3)';
+  ctx.font = '9px Varela Round, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('50%', fiftyX, H - 2);
+
+  milestoneData.forEach((ms, mi) => {
+    const y = PAD.top + mi * (rowH + gap);
+
+    // Milestone label
+    ctx.fillStyle = 'rgba(45,27,105,0.8)';
+    ctx.font = 'bold 13px Secular One, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('מילה ' + ms._milestone, PAD.left - 8, y + rowH / 2);
+
+    // Stacked bar (proportional)
+    let xOffset = PAD.left;
+    const activeCats = AA.CAT_ORDER.filter(c => ms[c].count > 0);
+
+    activeCats.forEach((c, ci) => {
+      const pct = ms[c].pct;
+      const segW = ms._total > 0 ? (ms[c].count / ms._total) * barMaxW : 0;
+      if (segW < 1) return;
+
+      ctx.fillStyle = AA.CAT_COLORS[c];
+      ctx.globalAlpha = 0.85;
+
+      const isFirst = ci === 0;
+      const isLast = ci === activeCats.length - 1;
+      const r = 8;
+      ctx.beginPath();
+      if (isFirst && isLast) {
+        ctx.moveTo(xOffset + r, y); ctx.arcTo(xOffset + segW, y, xOffset + segW, y + rowH, r);
+        ctx.arcTo(xOffset + segW, y + rowH, xOffset, y + rowH, r); ctx.arcTo(xOffset, y + rowH, xOffset, y, r);
+        ctx.arcTo(xOffset, y, xOffset + segW, y, r);
+      } else if (isFirst) {
+        ctx.moveTo(xOffset + r, y); ctx.lineTo(xOffset + segW, y); ctx.lineTo(xOffset + segW, y + rowH);
+        ctx.arcTo(xOffset, y + rowH, xOffset, y, r); ctx.arcTo(xOffset, y, xOffset + segW, y, r);
+      } else if (isLast) {
+        ctx.moveTo(xOffset, y); ctx.arcTo(xOffset + segW, y, xOffset + segW, y + rowH, r);
+        ctx.arcTo(xOffset + segW, y + rowH, xOffset, y + rowH, r); ctx.lineTo(xOffset, y + rowH); ctx.lineTo(xOffset, y);
+      } else {
+        ctx.rect(xOffset, y, segW, rowH);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Percentage inside if wide enough
+      if (segW > 35 && pct >= 10) {
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 12px Secular One, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(pct + '%', xOffset + segW / 2, y + rowH / 2);
+      }
+
+      xOffset += segW;
+    });
+  });
+
+  // Tooltip on click
+  const tipEl = document.getElementById('acqMilestonesTip');
+  canvas.onclick = function (e) {
+    if (!tipEl) return;
+    const rect = canvas.getBoundingClientRect();
+    const my = e.clientY - rect.top;
+    const mi = Math.floor((my - PAD.top) / (rowH + gap));
+    if (mi < 0 || mi >= milestoneData.length) return;
+    const ms = milestoneData[mi];
+    let html = '<div class="acq-tip-card"><strong>מילה ' + ms._milestone + '</strong> — ' + ms._total + ' מילים מסווגות<br>';
+    AA.CAT_ORDER.forEach(c => {
+      if (ms[c].count === 0) return;
+      const examples = (ms._examples[c] || []).join(', ');
+      html += '<span class="acq-legend-dot" style="background:' + AA.CAT_COLORS[c] + '"></span> ' +
+        AA.CAT_LABELS[c] + ': ' + ms[c].count + ' (' + ms[c].pct + '%)';
+      if (examples) html += ' <span style="opacity:0.6">(' + examples + ')</span>';
+      html += '<br>';
+    });
+    html += '</div>';
+    tipEl.innerHTML = html;
+  };
+}
+
+/* ===== Chapter 4: Insights ===== */
+function renderInsights(ordered, AA) {
+  const container = document.getElementById('acqInsightsList');
+  if (!container) return;
+
+  const insights = AA.generateInsights(ordered);
+  container.innerHTML = '';
+
+  if (insights.length === 0) {
+    container.innerHTML = '<div class="acq-insight-empty">צריך עוד מילים כדי לגלות תובנות מעניינות</div>';
+    return;
+  }
+
+  insights.forEach((insight, i) => {
+    const card = document.createElement('div');
+    card.className = 'acq-insight-card reveal-on-scroll';
+    card.style.setProperty('--reveal-delay', (i * 0.15) + 's');
+    card.innerHTML = '<div class="acq-insight-text">' + insight.text + '</div>';
+    container.appendChild(card);
+  });
+}
 
 /* ===== Export ===== */
 document.addEventListener('DOMContentLoaded', () => {
