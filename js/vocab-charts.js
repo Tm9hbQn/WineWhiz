@@ -607,19 +607,25 @@
   }
 
   // ==========================================
-  // INITIALIZATION
+  // INITIALIZATION (from DB words array)
   // ==========================================
-  function init() {
-    fetch('vocabulary.json?t=' + Date.now())
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        vocabData = data.filter(function (w) { return w.age_in_months <= BABY_MAX_AGE; });
-        buildCards();
-        enhanceMainTrendsChart();
-      })
-      .catch(function (err) {
-        console.warn('vocabulary.json not loaded:', err);
+  function init(wordsFromDB) {
+    if (!wordsFromDB || !wordsFromDB.length) return;
+    // Map DB words to chart format, filtering out evolution variants and unclear
+    vocabData = wordsFromDB
+      .filter(function (w) { return !w.linked_to; })
+      .filter(function (w) { return w.cdi_category && w.cdi_category !== 'unclear'; })
+      .filter(function (w) { return w.age_months != null && w.age_months <= BABY_MAX_AGE; })
+      .map(function (w) {
+        return {
+          word: w.word,
+          age_in_months: w.age_months,
+          cdi_category: w.cdi_category,
+          sub_category: w.sub_category
+        };
       });
+    buildCards();
+    enhanceMainTrendsChart();
   }
 
   function buildCards() {
@@ -718,9 +724,6 @@
     c2.appendChild(waveBackBtn);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    setTimeout(init, 300);
-  }
+  // Expose render function for app.js to call after DB words load
+  window.VocabCharts = { render: init };
 })();
