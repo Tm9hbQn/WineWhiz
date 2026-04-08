@@ -38,7 +38,7 @@
 │   └── pixel-baby.css      # Pixel baby styles (NOT loaded in main site)
 ├── js/
 │   ├── app.js              # Main app logic (~3224 lines)
-│   ├── acquisition-analysis.js # Acquisition analysis engine, module pattern (~444 lines)
+│   ├── acquisition-analysis.js # Acquisition analysis engine, module pattern (~525 lines)
 │   ├── vocab-charts.js     # Vocabulary analysis charts, IIFE pattern (~726 lines)
 │   └── pixel-baby.js       # Pixel baby character (NOT loaded in main site)
 └── supabase/
@@ -51,12 +51,12 @@ Understanding this prevents 90% of "it doesn't work" issues:
 
 ```
 1. Google Fonts (preconnect + stylesheet)
-2. css/styles.css?v=18          ← all visual styles
+2. css/styles.css?v=19          ← all visual styles
 3. HTML body renders
 4. Supabase JS SDK (CDN)        ← must load before app.js
 5. Lucide Icons (CDN)           ← must load before app.js calls lucide.createIcons()
-6. js/app.js?v=19               ← main logic, runs on DOMContentLoaded
-6b. js/acquisition-analysis.js?v=1 ← acquisition analysis engine (module)
+6. js/app.js?v=20               ← main logic, runs on DOMContentLoaded
+6b. js/acquisition-analysis.js?v=2 ← acquisition analysis engine (module)
 7. js/vocab-charts.js?v=12      ← chart IIFE, fetches vocabulary.json on load
 ```
 
@@ -151,7 +151,9 @@ All DB operations follow this pattern:
 | 8f | Rolling Mix | `#acqPulseCanvas` | Stacked bars per word window |
 | 8g | Milestones | `#acqMilestonesCanvas` | Category composition at milestones |
 | 8h | Acq Stat | `#acqStatCard` | Stat card for acquisition tab |
-| 8i | Insights | `#acqInsightsList` | Auto-generated textual insight cards |
+| 8i | Streaks | `#acqStreaksList` | Longest category streaks (>3 words), with word tags |
+| 8j | Last Streak | `#acqLastStreakCard` | Stat card for the most recent streak |
+| 8k | Insights | `#acqInsightsList` | Auto-generated textual insight cards |
 | 9 | Edit Modal | `#editModal` | View/Edit/Add-evo toggle, z-index 200 |
 | 10 | Evo Modal | `#evoModal` | Vertical chain with reorder, z-index 200 |
 | 11 | Delete Modal | `#deleteConfirmModal` | Custom styled, NEVER use native confirm() |
@@ -274,7 +276,9 @@ Tab switching uses `requestAnimationFrame` before rendering to ensure correct ca
 2. **Rolling Category Mix** (`acqPulseCanvas`): Horizontal stacked bars per word window (configurable size)
 3. **Milestone Comparison** (`acqMilestonesCanvas`): Category composition at key milestones
 4. **Stat Card** (`acqStatCard`): Dynamic stat about diversity, noun bias, or category spread
-5. **Insights** (`acqInsightsList`): Auto-generated textual insights (burst, late emergence, dominance, etc.)
+5. **Category Streaks** (`acqStreaksList`): Longest streak per category (>3 words), with compact word list and "load more" button if >10 words
+6. **Last Streak Stat** (`acqLastStreakCard`): Stat card showing the most recently acquired streak
+7. **Insights** (`acqInsightsList`): Auto-generated textual insights (burst, late emergence, dominance, etc.)
 
 ### Chart Design Standards
 
@@ -297,11 +301,28 @@ Stat cards (`.trends-stat-card`) follow this design:
 - Stagger highlight animation delays: 0.3s, 1.5s, 2.5s
 
 #### Chart Card Pattern (acquisition)
-- `.acq-card` class with title (`.acq-card-title`) and subtitle (`.acq-card-subtitle`)
-- Title: dynamic, generated from data (e.g. `getStreamTitle()`)
-- Subtitle: static description explaining what the chart shows
+- `.acq-card` class with **two-tier title system**:
+  - **Static title**: `<h3 class="acq-card-static-title">` — always visible, describes what the chart is (e.g. "מגמת הטיית שמות עצם")
+  - **Dynamic title**: `<p class="acq-card-title acq-card-dynamic-title">` — data-driven key insight sentence, set by JS (e.g. from `getNounBiasTitle()`)
+  - **Subtitle**: `<p class="acq-card-subtitle">` — shorter description below
 - Tooltip area for click interaction details
 - Legend row with colored dots
+
+#### Acquisition Order & Streak Rules (IMPORTANT)
+Words may not be logged in exact acquisition order (same-day bulk updates, retroactive entries).
+All acquisition-order-based analysis (streaks, insights, charts) must account for this:
+
+- **Streak definition**: A run of same-CDI-**category** (NOT sub-category) words where each
+  consecutive pair has at most **5 other words** between them in acquisition order.
+  This `STREAK_GAP = 5` constant is in `acquisition-analysis.js`.
+- **Rationale**: If a modifier word appears, then 4 nouns, then another modifier — the two
+  modifiers may have been acquired closer together but logged out of order. The ±5 tolerance
+  accounts for this imprecision.
+- **Algorithm** (`getCategoryStreaks()`): For each CDI category, collect all words of that
+  category sorted by acquisition index. Walk through consecutive pairs; if index difference
+  ≤ 5, they're in the same streak. Only streaks with >3 words are displayed.
+- **Last streak** (`getLastStreak()`): The streak whose last word has the highest acquisition
+  index. Prefers streaks >3 words, falls back to >1.
 
 ### When Adding Words to DB
 
@@ -344,7 +365,7 @@ Stat cards (`.trends-stat-card`) follow this design:
 grep 'app.js?v=' index.html && grep 'styles.css?v=' index.html && grep 'vocab-charts.js?v=' index.html
 ```
 
-Increment `?v=N` for every file you changed. Current versions: styles.css?v=18, app.js?v=19, vocab-charts.js?v=12.
+Increment `?v=N` for every file you changed. Current versions: styles.css?v=19, app.js?v=20, acquisition-analysis.js?v=2, vocab-charts.js?v=12.
 
 ### 2. RTL Arrows
 

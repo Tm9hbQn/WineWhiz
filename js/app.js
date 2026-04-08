@@ -2659,7 +2659,11 @@ function renderAcquisitionCharts() {
   // ---- STAT CARD ----
   renderAcqStatCard(ordered, AA);
 
-  // ---- CHAPTER 4: Insights ----
+  // ---- CHAPTER 4: Category Streaks ----
+  renderStreakCards(ordered, AA);
+  renderLastStreakCard(ordered, AA);
+
+  // ---- CHAPTER 5: Insights ----
   renderInsights(ordered, AA);
 
   // Observe for scroll reveal
@@ -3111,7 +3115,127 @@ function renderAcqStatCard(ordered, AA) {
   observer.observe(statCard);
 }
 
-/* ===== Chapter 4: Insights ===== */
+/* ===== Chapter 4: Category Streaks ===== */
+function renderStreakCards(ordered, AA) {
+  const container = document.getElementById('acqStreaksList');
+  const card = document.getElementById('acqStreaks');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const streaks = AA.getCategoryStreaks(ordered);
+
+  // Collect categories with longest streak > 3
+  const qualifying = [];
+  AA.CAT_ORDER.forEach(c => {
+    const s = streaks[c];
+    if (s.longest && s.longest.length > 3) {
+      qualifying.push({ cat: c, streak: s.longest, label: s.label, color: s.color });
+    }
+  });
+
+  if (qualifying.length === 0) {
+    if (card) card.style.display = 'none';
+    return;
+  }
+  if (card) card.style.display = '';
+
+  // Sort by streak length descending
+  qualifying.sort((a, b) => b.streak.length - a.streak.length);
+
+  qualifying.forEach(q => {
+    const el = document.createElement('div');
+    el.className = 'streak-item';
+
+    const fromIdx = q.streak[0].index;
+    const toIdx = q.streak[q.streak.length - 1].index;
+
+    // Stat sentence with highlights
+    el.innerHTML =
+      '<div class="trends-stat-card acq-streak-stat revealed">' +
+        '<p class="trends-stat-text">' +
+          '<i data-lucide="zap" class="stat-icon"></i> ' +
+          'רצף של <span class="stat-highlight">' + q.streak.length + ' ' + q.label + '</span> ' +
+          'במילים <span class="stat-highlight">#' + fromIdx + '-#' + toIdx + '</span>' +
+        '</p>' +
+      '</div>';
+
+    // Compact word list
+    const wordList = document.createElement('div');
+    wordList.className = 'streak-words';
+    const INITIAL_SHOW = 10;
+    const wordsToShow = q.streak.slice(0, INITIAL_SHOW);
+    const hasMore = q.streak.length > INITIAL_SHOW;
+
+    wordsToShow.forEach(w => {
+      const tag = document.createElement('span');
+      tag.className = 'streak-word-tag';
+      tag.style.borderColor = q.color;
+      tag.textContent = w.word;
+      wordList.appendChild(tag);
+    });
+
+    if (hasMore) {
+      const moreBtn = document.createElement('button');
+      moreBtn.className = 'streak-load-more';
+      moreBtn.textContent = 'עוד ' + (q.streak.length - INITIAL_SHOW) + ' מילים';
+      moreBtn.addEventListener('click', () => {
+        q.streak.slice(INITIAL_SHOW).forEach(w => {
+          const tag = document.createElement('span');
+          tag.className = 'streak-word-tag';
+          tag.style.borderColor = q.color;
+          tag.textContent = w.word;
+          wordList.insertBefore(tag, moreBtn);
+        });
+        moreBtn.remove();
+      });
+      wordList.appendChild(moreBtn);
+    }
+
+    el.appendChild(wordList);
+    container.appendChild(el);
+  });
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function renderLastStreakCard(ordered, AA) {
+  const card = document.getElementById('acqLastStreakCard');
+  const text = document.getElementById('acqLastStreakText');
+  if (!card || !text) return;
+
+  const last = AA.getLastStreak(ordered);
+  if (!last || last.words.length < 2) {
+    card.style.display = 'none';
+    return;
+  }
+
+  const babyName = BABY_NAME;
+  const wordsPreview = last.words.slice(-4).map(w => w.word).join(', ');
+
+  text.innerHTML =
+    '<i data-lucide="flame" class="stat-icon"></i> ' +
+    'הרצף האחרון של ' + babyName + ': ' +
+    '<span class="stat-highlight">' + last.words.length + ' ' + last.label + '</span> ' +
+    'ברצף — ' +
+    '<span class="stat-highlight">' + wordsPreview + '</span>';
+
+  card.style.display = '';
+  if (window.lucide) lucide.createIcons();
+
+  // Observe for reveal animation
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        card.classList.add('revealed');
+        observer.unobserve(card);
+      }
+    });
+  }, { threshold: 0.3 });
+  card.classList.remove('revealed');
+  observer.observe(card);
+}
+
+/* ===== Chapter 5: Insights ===== */
 function renderInsights(ordered, AA) {
   const container = document.getElementById('acqInsightsList');
   if (!container) return;

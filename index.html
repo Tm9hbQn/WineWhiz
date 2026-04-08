@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Secular+One&family=Varela+Round&family=Karantina:wght@300;400;700&family=Suez+One&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=18">
+  <link rel="stylesheet" href="css/styles.css?v=19">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👶</text></svg>">
 </head>
 <body>
@@ -247,7 +247,8 @@
     <div class="trends-tab-content" id="acquisitionView">
       <!-- Chapter 1: Noun Bias Trend -->
       <div class="acq-card reveal-on-scroll" id="acqNounBias">
-        <h3 class="acq-card-title" id="acqNounBiasTitle"></h3>
+        <h3 class="acq-card-static-title">מגמת הטיית שמות עצם</h3>
+        <p class="acq-card-title acq-card-dynamic-title" id="acqNounBiasTitle"></p>
         <p class="acq-card-subtitle acq-card-desc" id="acqNounBiasDesc">איך משתנה היחס בין שמות עצם לשאר הקטגוריות ככל שאוצר המילים גדל</p>
         <div class="acq-chart-wrap"><canvas id="acqNounBiasCanvas"></canvas></div>
         <div class="acq-tooltip" id="acqNounBiasTip"></div>
@@ -255,7 +256,8 @@
 
       <!-- Chapter 2: Rolling Category Mix -->
       <div class="acq-card reveal-on-scroll" id="acqPulse">
-        <h3 class="acq-card-title" id="acqPulseTitle"></h3>
+        <h3 class="acq-card-static-title">הרכב קטגוריות לפי סדר רכישה</h3>
+        <p class="acq-card-title acq-card-dynamic-title" id="acqPulseTitle"></p>
         <p class="acq-card-subtitle">מה ההרכב של כל קבוצת מילים? לחצו על שורה לפירוט</p>
         <div class="acq-slider-row">
           <span class="acq-slider-label">הציגו בקבוצות של</span>
@@ -275,7 +277,8 @@
 
       <!-- Chapter 3: Milestone Comparison -->
       <div class="acq-card reveal-on-scroll" id="acqMilestones">
-        <h3 class="acq-card-title" id="acqMilestonesTitle"></h3>
+        <h3 class="acq-card-static-title">השוואת אבני דרך</h3>
+        <p class="acq-card-title acq-card-dynamic-title" id="acqMilestonesTitle"></p>
         <p class="acq-card-subtitle">איך השתנה ההרכב ככל שנוספו מילים - לחצו על אבן דרך לפירוט</p>
         <div class="acq-chart-wrap"><canvas id="acqMilestonesCanvas"></canvas></div>
         <div class="acq-tooltip" id="acqMilestonesTip"></div>
@@ -287,9 +290,21 @@
         <p class="trends-stat-text" id="acqStatText"></p>
       </div>
 
-      <!-- Chapter 4: Insights -->
+      <!-- Chapter 4: Category Streaks -->
+      <div class="acq-card reveal-on-scroll" id="acqStreaks">
+        <h3 class="acq-card-static-title">רצפי רכישה לפי קטגוריה</h3>
+        <p class="acq-card-subtitle">הרצפים הארוכים ביותר של מילים מאותה קטגוריה (עם סובלנות של עד 5 מילים רווח)</p>
+        <div id="acqStreaksList"></div>
+      </div>
+
+      <!-- Last Streak Stat Card -->
+      <div class="trends-stat-card acq-stat-card" id="acqLastStreakCard" style="display:none">
+        <p class="trends-stat-text" id="acqLastStreakText"></p>
+      </div>
+
+      <!-- Chapter 5: Insights -->
       <div class="acq-card reveal-on-scroll" id="acqInsights">
-        <h3 class="acq-card-title">תובנות מהנתונים</h3>
+        <h3 class="acq-card-static-title">תובנות מהנתונים</h3>
         <p class="acq-card-subtitle">דפוסים מעניינים שהמנוע זיהה ברכישת המילים</p>
         <div class="acq-insights-list" id="acqInsightsList"></div>
       </div>
@@ -402,8 +417,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js"></script>
-  <script src="js/app.js?v=19"></script>
-  <script src="js/acquisition-analysis.js?v=1"></script>
+  <script src="js/app.js?v=20"></script>
+  <script src="js/acquisition-analysis.js?v=2"></script>
   <script src="js/vocab-charts.js?v=12"></script>
 </body>
 </html>

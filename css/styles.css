@@ -3060,14 +3060,81 @@ body::-webkit-scrollbar-thumb {
   padding: 2rem;
 }
 
+/* Static + Dynamic Titles */
+.acq-card-static-title {
+  font-family: 'Secular One', sans-serif;
+  font-size: 1.05rem;
+  color: var(--deep-purple);
+  margin: 0 0 0.15rem;
+}
+.acq-card-dynamic-title {
+  font-family: 'Varela Round', sans-serif;
+  font-size: 0.85rem;
+  color: var(--soft-purple);
+  margin: 0 0 0.3rem;
+  line-height: 1.5;
+}
+
+/* Streak Cards */
+.streak-item {
+  margin-bottom: 1rem;
+}
+.streak-item:last-child {
+  margin-bottom: 0;
+}
+.acq-streak-stat {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  padding: 0.9rem 1.2rem;
+}
+.streak-words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 0.3rem;
+}
+.streak-word-tag {
+  display: inline-block;
+  font-family: 'Varela Round', sans-serif;
+  font-size: 0.8rem;
+  color: var(--deep-purple);
+  background: var(--lavender);
+  border-radius: 10px;
+  padding: 0.2rem 0.6rem;
+  border-right: 3px solid;
+  transition: transform 0.15s ease;
+}
+.streak-word-tag:hover {
+  transform: scale(1.06);
+}
+.streak-load-more {
+  display: inline-block;
+  font-family: 'Varela Round', sans-serif;
+  font-size: 0.78rem;
+  color: var(--soft-purple);
+  background: none;
+  border: 1px dashed rgba(108,92,231,0.3);
+  border-radius: 10px;
+  padding: 0.2rem 0.7rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.streak-load-more:hover {
+  background: var(--lavender);
+  border-color: var(--soft-purple);
+}
+
 /* Mobile responsiveness for acquisition */
 @media (max-width: 600px) {
   .acq-card {
     padding: 1rem;
     border-radius: 16px;
   }
-  .acq-card-title {
+  .acq-card-static-title {
     font-size: 0.95rem;
+  }
+  .acq-card-dynamic-title {
+    font-size: 0.8rem;
   }
   .trends-tabs {
     gap: 4px;

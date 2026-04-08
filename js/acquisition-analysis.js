@@ -420,6 +420,95 @@ var AcquisitionAnalysis = (function () {
   }
 
   // ==========================================
+  // STREAK DETECTION (fuzzy ±5 rule)
+  // ==========================================
+  // Words may not be logged in exact acquisition order (bulk updates,
+  // same-day entries). A streak is a run of same-CDI-category words
+  // where each consecutive pair (within that category) has at most 5
+  // other words between them in the acquisition order. This tolerance
+  // accounts for imprecise logging order.
+
+  var STREAK_GAP = 5; // max index diff between consecutive same-cat words
+
+  function getCategoryStreaks(ordered) {
+    // Group word indices by category
+    var catWords = {};
+    CAT_ORDER.forEach(function (c) { catWords[c] = []; });
+    ordered.forEach(function (w) {
+      if (w.category && catWords.hasOwnProperty(w.category)) {
+        catWords[w.category].push(w);
+      }
+    });
+
+    var result = {};
+    CAT_ORDER.forEach(function (c) {
+      var words = catWords[c];
+      if (words.length < 2) {
+        result[c] = { longest: null, all: [], last: null };
+        return;
+      }
+
+      var streaks = [];
+      var current = [words[0]];
+
+      for (var i = 1; i < words.length; i++) {
+        if (words[i].index - words[i - 1].index <= STREAK_GAP) {
+          current.push(words[i]);
+        } else {
+          if (current.length > 1) streaks.push(current);
+          current = [words[i]];
+        }
+      }
+      if (current.length > 1) streaks.push(current);
+
+      // Find longest
+      var longest = null;
+      streaks.forEach(function (s) {
+        if (!longest || s.length > longest.length) longest = s;
+      });
+
+      result[c] = {
+        longest: longest,
+        all: streaks,
+        last: streaks.length > 0 ? streaks[streaks.length - 1] : null,
+        label: CAT_LABELS[c],
+        color: CAT_COLORS[c]
+      };
+    });
+    return result;
+  }
+
+  function getLastStreak(ordered) {
+    var streaks = getCategoryStreaks(ordered);
+    var last = null;
+    var lastEndIndex = -1;
+    CAT_ORDER.forEach(function (c) {
+      var s = streaks[c].last;
+      if (s && s.length > 3) {
+        var endIdx = s[s.length - 1].index;
+        if (endIdx > lastEndIndex) {
+          lastEndIndex = endIdx;
+          last = { category: c, words: s, label: streaks[c].label, color: streaks[c].color };
+        }
+      }
+    });
+    // If no streak >3, find any last streak >1
+    if (!last) {
+      CAT_ORDER.forEach(function (c) {
+        var s = streaks[c].last;
+        if (s && s.length > 1) {
+          var endIdx = s[s.length - 1].index;
+          if (endIdx > lastEndIndex) {
+            lastEndIndex = endIdx;
+            last = { category: c, words: s, label: streaks[c].label, color: streaks[c].color };
+          }
+        }
+      });
+    }
+    return last;
+  }
+
+  // ==========================================
   // PUBLIC API
   // ==========================================
   return {
@@ -427,6 +516,7 @@ var AcquisitionAnalysis = (function () {
     CAT_LABELS: CAT_LABELS,
     CAT_ORDER: CAT_ORDER,
     SUB_CAT_LABELS: SUB_CAT_LABELS,
+    STREAK_GAP: STREAK_GAP,
     getAcquisitionOrder: getAcquisitionOrder,
     getCumulativeCategories: getCumulativeCategories,
     getWindowSlice: getWindowSlice,
@@ -435,6 +525,8 @@ var AcquisitionAnalysis = (function () {
     getMilestoneData: getMilestoneData,
     getCategoryEmergence: getCategoryEmergence,
     getNounBiasData: getNounBiasData,
+    getCategoryStreaks: getCategoryStreaks,
+    getLastStreak: getLastStreak,
     generateInsights: generateInsights,
     getStreamTitle: getStreamTitle,
     getPulseTitle: getPulseTitle,
