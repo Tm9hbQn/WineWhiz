@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Secular+One&family=Varela+Round&family=Karantina:wght@300;400;700&family=Suez+One&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=14">
+  <link rel="stylesheet" href="css/styles.css?v=15">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👶</text></svg>">
 </head>
 <body>
@@ -107,6 +107,10 @@
           </div>
         </div>
       </div>
+      <div class="cat-picker-section" id="addFlowCatPicker">
+        <label class="cat-picker-label">סיווג קטגוריה (אופציונלי)</label>
+        <div class="cat-picker" id="addFlowCatPickerContainer"></div>
+      </div>
       <div class="notes-actions">
         <button class="notes-skip-btn" id="notesSkipBtn">דלגו</button>
         <button class="notes-save-btn" id="notesSaveBtn">שמרו 💕</button>
@@ -204,22 +208,78 @@
 
   <!-- Trends Section -->
   <section class="trends-section" id="trendsSection">
-    <h2 class="trends-title">מגמות</h2>
-    <div class="trends-chart-container" id="trendsChart">
-      <svg id="trendsSvg" class="trends-svg"></svg>
-      <div class="trends-tooltip hidden" id="trendsTooltip"></div>
-    </div>
-    <div class="trends-chart-container" id="deltaChart">
-      <h3 class="trends-chart-title vocab-card-title" style="margin-bottom:0.5rem">מילים חדשות לפי חודש</h3>
-      <svg id="deltaSvg" class="trends-svg"></svg>
-      <div class="trends-tooltip hidden" id="deltaTooltip"></div>
-    </div>
-    <div class="trends-stat-card" id="trendsStatCard">
-      <p class="trends-stat-text" id="trendsStatText"></p>
+    <h2 class="trends-title">תובנות ומגמות</h2>
+
+    <!-- Trends Tabs -->
+    <div class="trends-tabs" id="trendsTabs">
+      <button class="trends-tab active" data-tab="growthView">צמיחה</button>
+      <button class="trends-tab" data-tab="acquisitionView">ניתוח רכישה</button>
     </div>
 
-    <!-- Vocabulary Analysis Cards -->
-    <div id="vocabCards"></div>
+    <!-- Tab: Growth (existing charts) -->
+    <div class="trends-tab-content active" id="growthView">
+      <div class="trends-chart-container" id="trendsChart">
+        <svg id="trendsSvg" class="trends-svg"></svg>
+        <div class="trends-tooltip hidden" id="trendsTooltip"></div>
+      </div>
+      <div class="trends-chart-container" id="deltaChart">
+        <h3 class="trends-chart-title vocab-card-title" style="margin-bottom:0.5rem">מילים חדשות לפי חודש</h3>
+        <svg id="deltaSvg" class="trends-svg"></svg>
+        <div class="trends-tooltip hidden" id="deltaTooltip"></div>
+      </div>
+      <div class="trends-stat-card" id="trendsStatCard">
+        <p class="trends-stat-text" id="trendsStatText"></p>
+      </div>
+      <div id="vocabCards"></div>
+    </div>
+
+    <!-- Tab: Acquisition Analysis (new charts) -->
+    <div class="trends-tab-content" id="acquisitionView">
+      <!-- Chapter 1: Acquisition Stream -->
+      <div class="acq-card reveal-on-scroll" id="acqStream">
+        <h3 class="acq-card-title" id="acqStreamTitle"></h3>
+        <p class="acq-card-subtitle">התפלגות מצטברת של קטגוריות לפי סדר רכישת מילים</p>
+        <div class="acq-chart-wrap"><canvas id="acqStreamCanvas"></canvas></div>
+        <div class="acq-tooltip" id="acqStreamTip"></div>
+        <div class="acq-legend" id="acqStreamLeg"></div>
+      </div>
+
+      <!-- Chapter 2: Rolling Category Mix -->
+      <div class="acq-card reveal-on-scroll" id="acqPulse">
+        <h3 class="acq-card-title" id="acqPulseTitle"></h3>
+        <p class="acq-card-subtitle">הרכב כל קבוצת מילים לפי סדר הרכישה</p>
+        <div class="acq-slider-row">
+          <span class="acq-slider-label">הציגו בקבוצות של</span>
+          <div class="acq-window-btns" id="acqWindowBtns">
+            <button class="acq-window-btn" data-size="5">5</button>
+            <button class="acq-window-btn active" data-size="10">10</button>
+            <button class="acq-window-btn" data-size="15">15</button>
+            <button class="acq-window-btn" data-size="20">20</button>
+            <button class="acq-window-btn" data-size="25">25</button>
+          </div>
+          <span class="acq-slider-label">מילים</span>
+        </div>
+        <div class="acq-chart-wrap"><canvas id="acqPulseCanvas"></canvas></div>
+        <div class="acq-tooltip" id="acqPulseTip"></div>
+        <div class="acq-legend" id="acqPulseLeg"></div>
+      </div>
+
+      <!-- Chapter 3: Milestone Comparison -->
+      <div class="acq-card reveal-on-scroll" id="acqMilestones">
+        <h3 class="acq-card-title" id="acqMilestonesTitle"></h3>
+        <p class="acq-card-subtitle">השוואת הרכב אוצר המילים באבני דרך שונות</p>
+        <div class="acq-chart-wrap"><canvas id="acqMilestonesCanvas"></canvas></div>
+        <div class="acq-tooltip" id="acqMilestonesTip"></div>
+        <div class="acq-legend" id="acqMilestonesLeg"></div>
+      </div>
+
+      <!-- Chapter 4: Insights -->
+      <div class="acq-card reveal-on-scroll" id="acqInsights">
+        <h3 class="acq-card-title">תובנות מהנתונים</h3>
+        <p class="acq-card-subtitle">המנוע מזהה דפוסים מעניינים ברכישת המילים</p>
+        <div class="acq-insights-list" id="acqInsightsList"></div>
+      </div>
+    </div>
   </section>
 
   <!-- Word Modal (View + Edit) -->
@@ -256,6 +316,10 @@
         <div class="modal-field">
           <label>הערות</label>
           <div class="modal-input modal-notes" id="editNotesInput" contenteditable="true" role="textbox" data-placeholder="הוסיפו הקשר..."></div>
+        </div>
+        <div class="modal-field">
+          <label>קטגוריה</label>
+          <div class="cat-picker" id="editCatPickerContainer"></div>
         </div>
         <div class="modal-field">
           <label>התפתחות מילה 🔗</label>
@@ -322,7 +386,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js"></script>
-  <script src="js/app.js?v=15"></script>
+  <script src="js/app.js?v=16"></script>
+  <script src="js/acquisition-analysis.js?v=1"></script>
   <script src="js/vocab-charts.js?v=11"></script>
 </body>
 </html>

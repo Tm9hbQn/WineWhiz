@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS words (
   age_months INTEGER,
   notes TEXT,
   linked_to UUID REFERENCES words(id) ON DELETE SET NULL,
+  cdi_category TEXT,
+  sub_category TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -15,6 +17,16 @@ CREATE TABLE IF NOT EXISTS words (
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='words' AND column_name='linked_to') THEN
     ALTER TABLE words ADD COLUMN linked_to UUID REFERENCES words(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+-- Migration: add cdi_category and sub_category columns
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='words' AND column_name='cdi_category') THEN
+    ALTER TABLE words ADD COLUMN cdi_category TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='words' AND column_name='sub_category') THEN
+    ALTER TABLE words ADD COLUMN sub_category TEXT;
   END IF;
 END $$;
 
