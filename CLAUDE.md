@@ -30,7 +30,6 @@
 ├── index.html              # Single-page app (~409 lines)
 ├── docs.html               # Documentation viewer — renders CLAUDE.md, IMPROVEMENTS.md, changelog (~307 lines)
 ├── tests.html              # Pixel art character studio (369 lines, NOT linked from main)
-├── vocabulary.json         # Static CDI-categorized vocabulary (85 words, ages 10-16 months)
 ├── CLAUDE.md               # THIS FILE — read before every task
 ├── IMPROVEMENTS.md         # 20/80 optimization roadmap
 ├── css/
@@ -55,12 +54,12 @@ Understanding this prevents 90% of "it doesn't work" issues:
 3. HTML body renders
 4. Supabase JS SDK (CDN)        ← must load before app.js
 5. Lucide Icons (CDN)           ← must load before app.js calls lucide.createIcons()
-6. js/app.js?v=20               ← main logic, runs on DOMContentLoaded
-6b. js/acquisition-analysis.js?v=2 ← acquisition analysis engine (module)
-7. js/vocab-charts.js?v=12      ← chart IIFE, fetches vocabulary.json on load
+6. js/app.js?v=21               ← main logic, runs on DOMContentLoaded
+6b. js/acquisition-analysis.js?v=3 ← acquisition analysis engine (module)
+7. js/vocab-charts.js?v=13      ← chart IIFE, exposes VocabCharts.render(), called by app.js
 ```
 
-**Critical:** `app.js` depends on `window.supabase` (SDK) and `lucide` (icons) being available. `vocab-charts.js` is self-contained (IIFE) and fetches `vocabulary.json` independently with its own cache-bust (`?t=Date.now()`).
+**Critical:** `app.js` depends on `window.supabase` (SDK) and `lucide` (icons) being available. `vocab-charts.js` exposes `window.VocabCharts.render(words)` and is called by `app.js` after loading words from DB.
 
 ## Architecture Overview
 
@@ -100,7 +99,6 @@ User Input → submitWord() → duplicate check → age picker → notes → sav
 | `filterMonth` | Number\|null | Selected month filter (null = all) |
 | `filterCategory` | String\|null | Selected CDI category filter (null = all) |
 | `addFlowEvoSource` | Object\|null | Source word when adding evolution from view card |
-| `vocabLookup` | Object | Word text → vocabulary.json entry map |
 
 ### Database Schema
 
@@ -252,7 +250,7 @@ Words link via `linked_to` field forming directed graphs:
 | `personal_social` | אינטראקציה וחברה | #CE93D8 (purple) |
 | `unclear` | לא ברור | #B0BEC5 (gray, excluded from charts) |
 
-**Sub-categories** in vocabulary.json: people, sound_effects, animals, food_drink (22 words = 26%), body_parts, household, toys_and_routines, clothing, actions, routines_and_games, attributes, assertions, outside, unclear.
+**Sub-categories** (in DB `sub_category` column): people, sound_effects, animals, food_drink, body_parts, household, toys_and_routines, clothing, actions, routines_and_games, attributes, assertions, outside, unclear.
 
 ### Trends Section Tabs
 
@@ -324,20 +322,38 @@ All acquisition-order-based analysis (streaks, insights, charts) must account fo
 - **Last streak** (`getLastStreak()`): The streak whose last word has the highest acquisition
   index. Prefers streaks >3 words, falls back to >1.
 
-### When Adding Words to DB
+### Classification Standards (IMPORTANT)
 
-**Also update `vocabulary.json`** with proper CDI categorization. Schema per entry:
-```json
-{
-  "id": number,
-  "word": "Hebrew word (phonetic)",
-  "target_meaning": "Hebrew target",
-  "age_in_months": number,
-  "cdi_category": "general_nominals|specific_nominals|action_words|modifiers|personal_social|unclear",
-  "sub_category": "food_drink|animals|people|...",
-  "notes": "Context, pronunciation notes"
-}
+**All word classification lives in the DB** (`cdi_category` and `sub_category` columns in the `words` table). There is no separate JSON file.
+
+#### When Adding Words to DB
+Every word MUST have `cdi_category` and `sub_category` set. Use the category picker in the add-word flow or set via Supabase directly.
+
+#### Classification Rules
+| Category | When to Use | Sub-categories |
+|----------|------------|----------------|
+| `general_nominals` | Common nouns (animals, food, body parts, objects) | animals, food_drink, body_parts, clothing, household, toys_and_routines, outside |
+| `specific_nominals` | Proper names (people, characters, pets by name) | people |
+| `action_words` | Verbs, action requests (come, walk, blow) | actions |
+| `modifiers` | Adjectives, quantities, numbers (hot, cold, more, 1/2/3) | attributes |
+| `personal_social` | Greetings, social words, sound effects, assertions | routines_and_games, sound_effects, assertions |
+| `unclear` | Genuinely unknown meaning | unclear |
+
+#### Data Flow for Charts & Stats
 ```
+DB (words table) → app.js loadWords() → global `words` array
+                                              ↓
+                    ┌─────────────────────────┼─────────────────────────┐
+                    ↓                         ↓                         ↓
+            vocab-charts.js           acquisition-analysis.js      app.js renderTrends()
+            VocabCharts.render(words)  AcquisitionAnalysis.*()      SVG growth/delta charts
+            (category bars, %)         (streaks, insights, etc.)   (cumulative, per-month)
+```
+All charts/stats read from the global `words` array (fetched from Supabase). No JSON files involved.
+
+#### Current DB Stats (April 2026)
+- Total words: 114 (106 unique + 8 evolution variants)
+- Categories: general_nominals(68), personal_social(14), specific_nominals(10), modifiers(6), action_words(5), unclear(3)
 
 ## Pixel Baby Character (WIP — test page only)
 
@@ -365,7 +381,7 @@ All acquisition-order-based analysis (streaks, insights, charts) must account fo
 grep 'app.js?v=' index.html && grep 'styles.css?v=' index.html && grep 'vocab-charts.js?v=' index.html
 ```
 
-Increment `?v=N` for every file you changed. Current versions: styles.css?v=19, app.js?v=21, acquisition-analysis.js?v=2, vocab-charts.js?v=12.
+Increment `?v=N` for every file you changed. Current versions: styles.css?v=19, app.js?v=21, acquisition-analysis.js?v=3, vocab-charts.js?v=13.
 
 ### 2. RTL Arrows
 
@@ -398,13 +414,7 @@ Must return empty.
 node -c js/app.js && node -c js/vocab-charts.js && echo "OK"
 ```
 
-### 6. Vocabulary JSON Valid
-
-```bash
-node -e "const d=JSON.parse(require('fs').readFileSync('vocabulary.json','utf8')); console.log(d.length+' words, valid')"
-```
-
-### 7. Git Status Clean
+### 6. Git Status Clean
 
 ```bash
 git status --short
@@ -412,7 +422,7 @@ git status --short
 
 No untracked files that should be committed.
 
-### 8. Key Content
+### 7. Key Content
 
 ```bash
 grep 'מגמות' index.html    # Should be just "מגמות" not "מגמות צמיחה"
@@ -435,7 +445,7 @@ grep 'words-title' index.html  # Emoji 💬 on the RIGHT/start in RTL
 | Proportional bar not 100% | Animated values not normalized | Normalize: `current[c]/animSum * barH` |
 | Delete uses native `confirm()` | Regression | Must use `#deleteConfirmModal` |
 | Word linking uses `<select>` | Regression | Must use fuzzy search input |
-| vocab-charts shows stale data | vocabulary.json cached | Already uses `?t=Date.now()` bust |
+| vocab-charts shows stale data | Words not refreshed after add/edit | `VocabCharts.render(words)` called in `loadWords()` |
 | Edit modal stuck in edit mode | `switchToViewMode()` not called | Verify modal state on open |
 | Delta chart no spacing from chart above | `.trends-chart-container` had no margin-top | Added `.trends-chart-container + .trends-chart-container { margin-top: 1.2rem }` |
 
@@ -449,7 +459,7 @@ After completing ANY task:
 2. **Update file sizes/line counts** if files grew or shrank notably
 3. **Add new gotchas** if a bug was found and fixed
 4. **Update cache buster versions** listed in this file
-5. **Update vocabulary.json word count** if words were added
+5. **Update DB word count** in this file if words were added to DB
 6. **Update `BABY_MAX_AGE`** if baby has passed documented age cap
 7. **Add/remove features** from section table if DOM changed
 8. **Update IMPROVEMENTS.md** if a listed improvement was completed

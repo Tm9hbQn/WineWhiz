@@ -241,7 +241,7 @@ let addFlowSubCategory = null; // sub_category for add flow
 let addFlowEvoSource = null; // word object to exclude from duplicate check when adding evolution
 let filterMonth = null; // selected age_months filter (null = all)
 let filterCategory = null; // selected CDI category filter (null = all)
-let vocabLookup = {}; // word text → vocabulary.json entry (for category lookup)
+// Categories are stored directly in DB (cdi_category, sub_category columns)
 let selectedGrowthMonth = null; // selected month in growth chart (for red dot)
 let selectedNounBiasIndex = null; // selected index in noun bias chart (for red dot)
 
@@ -350,12 +350,12 @@ function buildCategoryPicker(container, selectedCat, selectedSub, onChange) {
 /* ===== Initialize ===== */
 document.addEventListener('DOMContentLoaded', async () => {
   initSupabase();
-  await ensureCategoryColumns();
   setupEventListeners();
   buildAgeOptions(ageOptions, null);
-  await loadVocabLookup();
   await loadWords();
-  await migrateVocabCategories();
+
+  // Render vocabulary charts from DB data
+  if (window.VocabCharts) VocabCharts.render(words);
 
   // Debug: show connection status in console
   console.log('[WordByDandan] supabase client:', db ? 'connected' : 'MISSING');
@@ -757,12 +757,8 @@ function selectAge(months) {
     // Init category picker in add flow
     const addCatContainer = document.getElementById('addFlowCatPickerContainer');
     if (addCatContainer) {
-      // Auto-detect category from vocabLookup
-      const vocabEntry = vocabLookup[currentWord];
-      const preCat = vocabEntry ? vocabEntry.cdi_category : null;
-      const preSub = vocabEntry ? vocabEntry.sub_category : null;
-      if (preCat) { addFlowCategory = preCat; addFlowSubCategory = preSub; }
-      buildCategoryPicker(addCatContainer, preCat !== 'unclear' ? preCat : null, preSub !== 'unclear' ? preSub : null, (cat, sub) => {
+      // Start with no pre-selected category (user picks manually)
+      buildCategoryPicker(addCatContainer, null, null, (cat, sub) => {
         addFlowCategory = cat;
         addFlowSubCategory = sub;
       });
@@ -1105,7 +1101,7 @@ function getFilteredWords() {
   // Apply category filter
   if (filterCategory !== null) {
     result = result.filter((w) => {
-      const cat = getWordCategory(w.word);
+      const cat = getWordCategory(w);
       return cat === filterCategory;
     });
   }
@@ -1121,73 +1117,18 @@ function getFilteredWords() {
   return scored.map((r) => r.word);
 }
 
-/* ===== Vocabulary Lookup (for category filters) ===== */
-async function loadVocabLookup() {
-  try {
-    const res = await fetch('vocabulary.json?t=' + Date.now());
-    const data = await res.json();
-    vocabLookup = {};
-    data.forEach((entry) => {
-      vocabLookup[entry.word] = entry;
-    });
-  } catch (e) {
-    console.error('Failed to load vocabulary.json for filters:', e);
-    vocabLookup = {};
-  }
-}
-
-/* ===== Migrate categories from vocabulary.json to DB ===== */
-async function migrateVocabCategories() {
-  if (!words.length || !Object.keys(vocabLookup).length) return;
-  const toMigrate = words.filter(w => !w.cdi_category && vocabLookup[w.word]);
-  for (const w of toMigrate) {
-    const entry = vocabLookup[w.word];
-    try {
-      await updateWord(w.id, {
-        cdi_category: entry.cdi_category,
-        sub_category: entry.sub_category,
-      });
-      w.cdi_category = entry.cdi_category;
-      w.sub_category = entry.sub_category;
-    } catch (e) {
-      console.warn('Migration failed for:', w.word, e);
-    }
-  }
-  if (toMigrate.length > 0) {
-    console.log(`[WordByDandan] Migrated categories for ${toMigrate.length} words`);
-  }
-}
-
-/* ===== Ensure DB columns exist (Supabase migration) ===== */
-async function ensureCategoryColumns() {
-  if (!db) return;
-  try {
-    // Try a harmless query with the new columns - if it fails, columns don't exist yet
-    const { error } = await db.from('words').select('cdi_category').limit(1);
-    if (error && error.message.includes('cdi_category')) {
-      console.warn('[WordByDandan] cdi_category column not found - run schema migration');
-    }
-  } catch (e) {
-    // Silently continue - columns will be added when schema is run
-  }
-}
+/* ===== Category Helpers (data from DB cdi_category/sub_category columns) ===== */
 
 function getWordCategory(wordOrText) {
-  // If passed a word object with cdi_category, use it directly
   if (typeof wordOrText === 'object' && wordOrText.cdi_category && wordOrText.cdi_category !== 'unclear') {
     return wordOrText.cdi_category;
-  }
-  const text = typeof wordOrText === 'string' ? wordOrText : wordOrText.word;
-  const entry = vocabLookup[text];
-  if (entry && entry.cdi_category && entry.cdi_category !== 'unclear') {
-    return entry.cdi_category;
   }
   return null;
 }
 
 function getWordCategoryFromObj(w) {
   if (w.cdi_category && w.cdi_category !== 'unclear') return w.cdi_category;
-  return getWordCategory(w.word);
+  return null;
 }
 
 /* ===== Filter Pills ===== */
@@ -1217,7 +1158,7 @@ function buildFilterPills() {
   // Category pills — only categories that exist in vocabulary data for current words
   const catSet = new Set();
   words.forEach((w) => {
-    const cat = getWordCategory(w.word);
+    const cat = getWordCategory(w);
     if (cat) catSet.add(cat);
   });
 
@@ -1251,6 +1192,8 @@ async function loadWords() {
     words = await fetchWords();
     buildFilterPills();
     renderWords();
+    // Re-render vocabulary charts from DB data
+    if (window.VocabCharts) VocabCharts.render(words);
   } catch (err) {
     console.error('Error loading words:', err);
   }
@@ -1284,7 +1227,7 @@ function renderWords() {
       card.classList.add('word-card-exact-match');
     }
     card.style.setProperty('--reveal-delay', `${Math.min(i * 0.06, 0.5)}s`);
-    const cat = getWordCategory(w.word);
+    const cat = getWordCategory(w);
     if (cat && CDI_CAT_COLORS[cat]) {
       card.style.setProperty('--card-accent', CDI_CAT_COLORS[cat]);
       card.classList.add('word-card-categorized');
@@ -1449,7 +1392,7 @@ function openEditModal(word) {
     catBadge.textContent = CDI_CAT_LABELS[wordCat];
     viewCategoryDisplay.appendChild(catBadge);
     // Show sub-category too if available
-    const subCat = word.sub_category || (vocabLookup[word.word] && vocabLookup[word.word].sub_category);
+    const subCat = word.sub_category;
     if (subCat && subCat !== 'unclear') {
       const allSubs = CDI_SUB_CATEGORIES[wordCat] || [];
       const subInfo = allSubs.find(s => s.key === subCat);
@@ -1993,7 +1936,7 @@ function renderTimeline() {
 
     wordItemMap.set(w.id, item);
 
-    const cat = getWordCategory(w.word);
+    const cat = getWordCategory(w);
     const catColor = cat && CDI_CAT_COLORS[cat] ? CDI_CAT_COLORS[cat] : null;
 
     const dot = document.createElement('div');

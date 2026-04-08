@@ -63,20 +63,11 @@ var AcquisitionAnalysis = (function () {
 
   function resolveCategory(w) {
     if (w.cdi_category && w.cdi_category !== 'unclear') return w.cdi_category;
-    // Fallback to vocabLookup if available
-    if (typeof vocabLookup !== 'undefined' && vocabLookup[w.word]) {
-      var entry = vocabLookup[w.word];
-      if (entry.cdi_category && entry.cdi_category !== 'unclear') return entry.cdi_category;
-    }
     return null;
   }
 
   function resolveSubCategory(w) {
     if (w.sub_category && w.sub_category !== 'unclear') return w.sub_category;
-    if (typeof vocabLookup !== 'undefined' && vocabLookup[w.word]) {
-      var entry = vocabLookup[w.word];
-      if (entry.sub_category && entry.sub_category !== 'unclear') return entry.sub_category;
-    }
     return null;
   }
 
