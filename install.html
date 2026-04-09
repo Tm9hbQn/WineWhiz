@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>התקנה — המילים של דניאלה</title>
+  <meta name="theme-color" content="#6C5CE7">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👶</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Secular+One&family=Varela+Round&family=Karantina:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --pink: #FFE5EC; --hot-pink: #FF6B9D; --deep-purple: #2D1B69;
+      --soft-purple: #6C5CE7; --bg: #FFF9FB; --teal: #4ECDC4;
+      --lavender: #F3E5F5; --mint: #E8F5E9;
+    }
+    body {
+      font-family: 'Varela Round', sans-serif;
+      background: var(--bg);
+      color: var(--deep-purple);
+      min-height: 100vh;
+      direction: rtl;
+      padding: 0;
+    }
+
+    .install-header {
+      background: linear-gradient(135deg, var(--soft-purple), var(--hot-pink));
+      padding: 2.5rem 1.5rem 2rem;
+      text-align: center;
+      color: white;
+    }
+    .install-header-emoji { font-size: 3rem; margin-bottom: 0.5rem; }
+    .install-header h1 {
+      font-family: 'Secular One', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 400;
+      margin-bottom: 0.3rem;
+    }
+    .install-header p {
+      font-size: 0.95rem;
+      opacity: 0.9;
+    }
+
+    .install-content {
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+
+    .install-card {
+      background: white;
+      border-radius: 20px;
+      padding: 1.8rem;
+      margin-bottom: 1.2rem;
+      box-shadow: 0 4px 20px rgba(108, 92, 231, 0.1);
+    }
+
+    .install-card-icon {
+      font-size: 2.5rem;
+      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+    .install-card h2 {
+      font-family: 'Secular One', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 400;
+      text-align: center;
+      color: var(--soft-purple);
+      margin-bottom: 0.8rem;
+    }
+    .install-card p {
+      font-size: 0.9rem;
+      line-height: 1.7;
+      margin-bottom: 0.8rem;
+      color: var(--deep-purple);
+    }
+
+    .install-steps {
+      list-style: none;
+      counter-reset: step;
+    }
+    .install-steps li {
+      counter-increment: step;
+      position: relative;
+      padding-right: 2.5rem;
+      padding-bottom: 1rem;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+    .install-steps li::before {
+      content: counter(step);
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 1.8rem;
+      height: 1.8rem;
+      background: linear-gradient(135deg, var(--soft-purple), var(--hot-pink));
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+    .install-steps li:last-child { padding-bottom: 0; }
+
+    .install-btn {
+      display: block;
+      width: 100%;
+      padding: 0.9rem;
+      font-family: 'Secular One', sans-serif;
+      font-size: 1rem;
+      font-weight: 400;
+      background: linear-gradient(135deg, var(--soft-purple), var(--hot-pink));
+      color: white;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      margin-top: 1rem;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .install-btn:active { transform: scale(0.97); }
+
+    .install-btn-secondary {
+      background: var(--lavender);
+      color: var(--deep-purple);
+    }
+
+    .install-badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+    .badge-recommended {
+      background: var(--mint);
+      color: #2E7D32;
+    }
+    .badge-optional {
+      background: var(--lavender);
+      color: var(--soft-purple);
+    }
+
+    .install-note {
+      font-size: 0.8rem;
+      color: var(--soft-purple);
+      opacity: 0.7;
+      text-align: center;
+      margin-top: 0.5rem;
+    }
+
+    .install-divider {
+      text-align: center;
+      margin: 0.5rem 0;
+      color: var(--soft-purple);
+      opacity: 0.3;
+      font-size: 0.8rem;
+    }
+
+    .back-link {
+      display: block;
+      text-align: center;
+      padding: 1.5rem;
+      color: var(--soft-purple);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    /* Hide install button if already in standalone */
+    @media all and (display-mode: standalone) {
+      .pwa-install-card .install-btn { display: none; }
+      .pwa-install-card .already-installed { display: block !important; }
+    }
+    .already-installed {
+      display: none;
+      text-align: center;
+      color: var(--teal);
+      font-weight: bold;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <header class="install-header">
+    <div class="install-header-emoji">📲</div>
+    <h1>התקינו את המילים של דניאלה</h1>
+    <p>אפליקציה + וויג'ט למשפחה</p>
+  </header>
+
+  <div class="install-content">
+
+    <!-- PWA Install Card -->
+    <div class="install-card pwa-install-card">
+      <span class="install-badge badge-recommended">מומלץ</span>
+      <div class="install-card-icon">📱</div>
+      <h2>האפליקציה</h2>
+      <p>אפליקציה מלאה על מסך הבית. כוללת את כל המילים, הגרפים, הניתוחים, וסינכרון בזמן אמת בין כל המכשירים.</p>
+
+      <ol class="install-steps">
+        <li>פתחו את האתר <strong>בכרום</strong> (לא בדפדפן אחר)</li>
+        <li>לחצו על שלוש הנקודות למעלה <strong>⋮</strong></li>
+        <li>בחרו <strong>"התקנת אפליקציה"</strong> או <strong>"הוספה למסך הבית"</strong></li>
+        <li>אשרו — האייקון יופיע על מסך הבית</li>
+      </ol>
+
+      <button class="install-btn" id="installPwaBtn">התקינו עכשיו</button>
+      <div class="already-installed">האפליקציה כבר מותקנת</div>
+      <p class="install-note">אם הכפתור לא עובד, עקבו אחרי ההוראות למעלה</p>
+    </div>
+
+    <div class="install-divider">~ ~ ~</div>
+
+    <!-- Widget Install Card -->
+    <div class="install-card">
+      <span class="install-badge badge-optional">תוספת</span>
+      <div class="install-card-icon">🔲</div>
+      <h2>וויג'ט למסך הבית</h2>
+      <p>וויג'ט קטן על מסך הבית שמאפשר להוסיף מילה חדשה בלחיצה אחת, בלי לפתוח שום אפליקציה.</p>
+
+      <ol class="install-steps">
+        <li>לחצו על <strong>"הורידו את הוויג'ט"</strong> למטה</li>
+        <li>פתחו את הקובץ שהורד</li>
+        <li>אם מופיעה אזהרה — לחצו <strong>"הגדרות"</strong> ואשרו התקנה ממקור לא ידוע</li>
+        <li>לחצו <strong>"התקנה"</strong></li>
+        <li>חזרו למסך הבית → לחיצה ארוכה → <strong>"וויג'טים"</strong> → חפשו <strong>"דנדן"</strong> → גררו למסך</li>
+      </ol>
+
+      <a class="install-btn" id="widgetDownloadBtn" href="https://github.com/Tm9hbQn/Wordbydandan/releases/latest" target="_blank">הורידו את הוויג'ט</a>
+      <p class="install-note">קובץ התקנה לאנדרואיד בלבד</p>
+    </div>
+
+    <a class="back-link" href="index.html">חזרה לאפליקציה ←</a>
+  </div>
+
+  <script>
+    // Handle PWA install button
+    let deferredPrompt = null;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+    });
+
+    document.getElementById('installPwaBtn').addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          document.querySelector('.already-installed').style.display = 'block';
+        }
+        deferredPrompt = null;
+      } else {
+        // Can't trigger install programmatically — show instructions
+        alert('פתחו את האתר בכרום, לחצו על ⋮ למעלה, ובחרו "התקנת אפליקציה"');
+      }
+    });
+
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>

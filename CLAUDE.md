@@ -31,20 +31,17 @@
 /
 ├── index.html              # Single-page app (~430 lines)
 ├── quick-add.html          # PWA shortcut — minimal word add page
-├── docs.html               # Documentation viewer — renders CLAUDE.md, IMPROVEMENTS.md, changelog (~307 lines)
-├── tests.html              # Pixel art character studio (369 lines, NOT linked from main)
+├── install.html            # Download/install page for PWA and widget
 ├── manifest.webmanifest    # PWA manifest — app name, icons, shortcuts, display mode
 ├── sw.js                   # Service Worker — caching, offline, push notifications
 ├── CLAUDE.md               # THIS FILE — read before every task
 ├── IMPROVEMENTS.md         # 20/80 optimization roadmap
 ├── css/
 │   ├── styles.css          # All main styles (~3280 lines)
-│   └── pixel-baby.css      # Pixel baby styles (NOT loaded in main site)
 ├── js/
 │   ├── app.js              # Main app logic + PWA module (~3620 lines)
 │   ├── acquisition-analysis.js # Acquisition analysis engine, module pattern (~525 lines)
 │   ├── vocab-charts.js     # Vocabulary analysis charts, IIFE pattern (~726 lines)
-│   └── pixel-baby.js       # Pixel baby character (NOT loaded in main site)
 ├── icons/
 │   ├── icon-192x192.png    # PWA icon 192x192
 │   ├── icon-512x512.png    # PWA icon 512x512
@@ -187,7 +184,7 @@ All DB operations follow this pattern:
 | 11 | Delete Modal | `#deleteConfirmModal` | Custom styled, NEVER use native confirm() |
 | 12 | Install Banner | `#pwaInstallBanner` | PWA install prompt, fixed bottom, z-index 150 |
 | 13 | Realtime Toast | `#realtimeToast` | Real-time new word notification, fixed top center, z-index 250 |
-| 14 | Footer | `.main-footer` | Copyright, export btn, tests.html link, docs.html link |
+| 14 | Footer | `.main-footer` | Copyright, export btn, install page link |
 
 ## Design System
 
@@ -483,13 +480,6 @@ A minimal native Android app that provides a home screen widget for quick word a
 
 ---
 
-## Pixel Baby Character (WIP — test page only)
-
-- **Status:** Removed from main site. Development on `tests.html` only.
-- **Files:** `css/pixel-baby.css`, `js/pixel-baby.js` — NOT loaded in `index.html`
-- **Description:** Baby girl with golden-blonde reddish hair, small ponytail, pink polka-dot dress
-- **Known issues:** Cross-eyed look, oversized ponytail, invisible smile, poor animation positioning
-
 ## Search System
 
 - `fuzzyMatch()`: substring → char-sequence → Levenshtein distance
@@ -528,21 +518,13 @@ Must return ZERO lines. All user-visible arrows: `←` only. Key locations:
 grep -oP '(?:href|src)="([^"]*\.(css|js))"' index.html | sed 's/.*="//;s/"//;s/?.*//' | while read f; do [ ! -f "$f" ] && echo "MISSING: $f"; done
 ```
 
-### 4. Pixel Baby Not in Main Site
-
-```bash
-grep 'pixel-baby' index.html
-```
-
-Must return empty.
-
-### 5. JS Syntax Valid
+### 4. JS Syntax Valid
 
 ```bash
 node -c js/app.js && node -c js/vocab-charts.js && echo "OK"
 ```
 
-### 6. Git Status Clean
+### 5. Git Status Clean
 
 ```bash
 git status --short
@@ -550,7 +532,7 @@ git status --short
 
 No untracked files that should be committed.
 
-### 7. Key Content
+### 6. Key Content
 
 ```bash
 grep 'מגמות' index.html    # Should be just "מגמות" not "מגמות צמיחה"
@@ -566,7 +548,6 @@ grep 'words-title' index.html  # Emoji 💬 on the RIGHT/start in RTL
 | Changes don't appear on live site | Browser cache | Increment `?v=N` cache buster |
 | `→` arrows instead of `←` | Old cached JS | Cache buster + verify with grep |
 | 404 on new file | Not git-tracked | `git add` before push |
-| Pixel baby on main site | CSS/JS referenced in index.html | Remove references |
 | Timeline shows all words | `timelineDisplayCount` not reset to 10 | Check `renderWords()` |
 | Stat highlights invisible | Conflicting CSS animations | Only use `statShimmer`, no `statPop` |
 | Chart % wrong / ghost categories | Using animation state for labels | Use `actualPcts` and real `activeCats` |
