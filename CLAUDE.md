@@ -450,9 +450,9 @@ A minimal native Android app that provides a home screen widget for quick word a
 
 ### How It Works
 1. Widget on home screen shows app branding and "tap to add" prompt
-2. Tapping opens a transparent dialog activity with the full add flow
-3. The dialog has: word input, age picker, notes, category, submit
-4. On submit, calls Supabase REST API and closes
+2. Tapping opens a transparent WebView overlay that loads `quick-add.html`
+3. The add flow (word, age, submit) comes from the web — always up to date
+4. No APK update needed for UI changes, only for widget home screen appearance
 
 ### Building the APK
 - GitHub Actions workflow (`build-widget.yml`) auto-builds on push to `main`
@@ -462,12 +462,12 @@ A minimal native Android app that provides a home screen widget for quick word a
 ### Key Files
 | File | Purpose |
 |------|---------|
-| `AddWordActivity.kt` | Dialog-style activity with full add flow |
+| `AddWordActivity.kt` | WebView dialog — loads quick-add.html from web |
 | `WordWidgetProvider.kt` | Widget lifecycle, click handling, word count |
 | `SupabaseApi.kt` | Direct REST API calls to Supabase (no SDK) |
 | `LauncherActivity.kt` | Opens PWA URL in browser |
 | `widget_layout.xml` | Widget home screen appearance |
-| `activity_add_word.xml` | Dialog layout |
+| `widget_layout.xml` | Widget home screen appearance |
 | `build-widget.yml` | GitHub Actions APK build workflow |
 
 ### Installation
