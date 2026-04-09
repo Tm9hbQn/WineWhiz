@@ -9,27 +9,31 @@
     android:gravity="center"
     android:layoutDirection="rtl">
 
-    <!-- Title row -->
+    <!-- Title -->
     <TextView
         android:id="@+id/widget_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/widget_title"
-        android:textSize="16sp"
-        android:textColor="@color/soft_purple"
+        android:text="✨ המילים של דניאלה"
+        android:textSize="17sp"
+        android:textColor="#FFFFFF"
         android:textStyle="bold"
         android:gravity="center"
-        android:layout_marginBottom="8dp" />
+        android:shadowColor="#40000000"
+        android:shadowDx="0"
+        android:shadowDy="1"
+        android:shadowRadius="2"
+        android:layout_marginBottom="10dp" />
 
-    <!-- Fake input field (clickable) -->
+    <!-- Fake input (clickable) -->
     <TextView
         android:id="@+id/widget_input_hint"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/widget_input_hint"
-        android:textSize="15sp"
-        android:textColor="@color/hint"
-        android:background="@drawable/input_bg"
+        android:text="📝  לחצו להוספת מילה חדשה..."
+        android:textSize="14sp"
+        android:textColor="#E0FFFFFF"
+        android:background="@drawable/widget_input_bg"
         android:padding="12dp"
         android:gravity="center"
         android:layout_marginBottom="8dp" />
@@ -40,8 +44,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textSize="12sp"
-        android:textColor="@color/deep_purple"
-        android:gravity="center"
-        android:alpha="0.6" />
+        android:textColor="#CCFFFFFF"
+        android:gravity="center" />
 
 </LinearLayout>

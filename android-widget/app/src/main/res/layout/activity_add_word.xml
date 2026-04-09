@@ -126,14 +126,6 @@
                 android:layout_marginBottom="8dp" />
 
             <!-- Category buttons -->
-            <com.google.android.flexbox.FlexboxLayout
-                android:id="@+id/category_buttons_flex"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
-                android:visibility="gone" />
-
-            <!-- Fallback: simple horizontal scroll for categories -->
             <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
